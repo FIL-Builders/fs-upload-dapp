@@ -10,11 +10,15 @@
     "postinstall": "cd node_modules/@filoz/synapse-sdk && npm install && npm run build"
   },
   "dependencies": {
-    "@filoz/synapse-sdk": "github:FilOzone/synapse-sdk#rvagg/pdp",
+    "@filoz/synapse-sdk": "github:FilOzone/synapse-sdk#rvagg/pdpservice",
     "@rainbow-me/rainbowkit": "^2.2.5",
+    "@tanstack/react-query": "^5.28.4",
+    "@wagmi/core": "^2.6.7",
     "ethers": "^6.14.3",
+    "framer-motion": "^11.0.8",
     "next": "15.3.2",
     "react": "^19.0.0",
+    "react-confetti": "^6.1.0",
     "react-dom": "^19.0.0",
     "viem": "^2.30.3",
     "wagmi": "^2.15.4"
@@ -24,6 +28,9 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "eslint": "9.28.0",
+    "eslint-config-next": "15.3.3",
+    "pino-pretty": "^13.0.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
