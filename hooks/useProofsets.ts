@@ -21,7 +21,7 @@ const fetchProofSetDetails = async (
   pdpUrl: string
 ): Promise<ProofSetDetails | null> => {
   try {
-    const response = await fetch(`${pdpUrl}pdp/proof-sets/${proofsetId}`, {
+    const response = await fetch(`${pdpUrl}/pdp/proof-sets/${proofsetId}`, {
       method: "GET",
       headers: {
         Accept: "application/json",
