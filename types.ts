@@ -4,7 +4,17 @@ import {
   EnhancedDataSetInfo,
 } from "@filoz/synapse-sdk";
 
-export interface DataSet extends EnhancedDataSetInfo {
+export interface DatasetsSizeInfo {
+  leafCount: number;
+  pieceCount: number;
+  withCDN: boolean;
+  sizeInBytes: number;
+  sizeInKiB: number;
+  sizeInMiB: number;
+  sizeInGB: number;
+  message: string;
+}
+export interface DataSet extends EnhancedDataSetInfo, DatasetsSizeInfo {
   data: DataSetData | null;
   provider: ProviderInfo | null;
 }

@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@filoz/synapse-sdk':
-        specifier: ^0.24.3
-        version: 0.24.3(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@3.22.4)
+        specifier: ^0.25.1
+        version: 0.25.1(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@3.22.4)
       '@rainbow-me/rainbowkit':
         specifier: ^2.2.8
         version: 2.2.8(@tanstack/react-query@5.85.8(react@19.1.1))(@types/react@19.1.12)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(typescript@5.9.2)(viem@2.37.1(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@3.22.4))(wagmi@2.16.9(@tanstack/query-core@5.85.7)(@tanstack/react-query@5.85.8(react@19.1.1))(@types/react@19.1.12)(bufferutil@4.0.9)(react@19.1.1)(typescript@5.9.2)(utf-8-validate@5.0.10)(viem@2.37.1(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@3.22.4))(zod@3.22.4))
@@ -174,8 +174,8 @@ packages:
     resolution: {integrity: sha512-zQ0IqbdX8FZ9aw11vP+dZkKDkS+kgIvQPHnSAXzP9pLu+Rfu3D3XEeLbicvoXJTYnhZiPmsZUxgdzXwNKxRPbA==}
     engines: {node: '>=14'}
 
-  '@filoz/synapse-sdk@0.24.3':
-    resolution: {integrity: sha512-78HyFPvSZ0T+OSxzU8UHrOeJuwUxq7JwrVj3vMIwMzdV12h/4XxbBSsg3dWdvpMCodcxM4fgZvGGc5vV2iRdMw==}
+  '@filoz/synapse-sdk@0.25.1':
+    resolution: {integrity: sha512-WHlf4ImKA0Gmicv7tJubbwDZexaWSrTWjgXJ3nQecJO5pq3LFuad7wR/ICCKUfgKi3UhYEwRfP5NjwO646xCOg==}
 
   '@gemini-wallet/core@0.2.0':
     resolution: {integrity: sha512-vv9aozWnKrrPWQ3vIFcWk7yta4hQW1Ie0fsNNPeXnjAxkbXr2hqMagEptLuMxpEP2W3mnRu05VDNKzcvAuuZDw==}
@@ -3426,7 +3426,7 @@ snapshots:
       ethereum-cryptography: 2.2.1
       micro-ftch: 0.3.1
 
-  '@filoz/synapse-sdk@0.24.3(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@3.22.4)':
+  '@filoz/synapse-sdk@0.25.1(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@3.22.4)':
     dependencies:
       '@web3-storage/data-segment': 5.3.0
       ethers: 6.15.0(bufferutil@4.0.9)(utf-8-validate@5.0.10)

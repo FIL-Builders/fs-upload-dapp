@@ -77,6 +77,8 @@ export const DatasetsViewer = () => {
                       </p>
                     </div>
                     <div className="text-right">
+                      <p className="text-sm text-gray-600">{dataset.message}</p>
+
                       <p className="text-sm text-gray-600">
                         Commission: {dataset.commissionBps / 100}%
                       </p>
