@@ -90,6 +90,13 @@ export const calculateStorageMetrics = async (
     storageCosts
   );
 
+  const cdnUsedGiB = Object.values(datasetsSizeInfo)
+    .filter((dataset) => dataset.withCDN)
+    .reduce((acc, dataset) => acc + dataset.sizeInGB, 0);
+  const nonCdnUsedGiB = Object.values(datasetsSizeInfo)
+    .filter((dataset) => !dataset.withCDN)
+    .reduce((acc, dataset) => acc + dataset.sizeInGB, 0);
+
   const depositNeeded = warmStorageBalance.depositAmountNeeded;
   const rateUsed = warmStorageBalance.currentRateUsed;
   const totalLockupNeeded = warmStorageBalance.lockupAllowanceNeeded;
@@ -99,6 +106,8 @@ export const calculateStorageMetrics = async (
     rateUsed: rateUsed, // rate currently used
     currentStorageBytes: BigInt(currentStorageBytes), // current storage used in bytes
     currentStorageGB, // current storage used in GB
+    cdnUsedGiB, // current storage used in GB
+    nonCdnUsedGiB, // current storage used in GB
     totalLockupNeeded, // total lockup needed
     depositNeeded, // deposit needed for storage
     persistenceDaysLeft, // days of storage left at requested rate
@@ -108,6 +117,7 @@ export const calculateStorageMetrics = async (
     isSufficient, // are both sufficient?
     currentRateAllowanceGB, // how much storage (GB) current rate allowance supports
     currentLockupAllowance, // current lockup allowance
+    totalDatasets: datasets.length, // total datasets
   };
 };
 
@@ -208,10 +218,13 @@ export const getDatasetSizeMessage = (datasetSizeInfo: {
   sizeInMiB: number;
   sizeInGB: number;
 }) => {
-  if (datasetSizeInfo?.sizeInGB < 0.1 && datasetSizeInfo?.sizeInMiB > 0.1) {
+  if (datasetSizeInfo?.sizeInGB > 0.1) {
+    return `Dataset size: ${datasetSizeInfo.sizeInGB.toFixed(4)} GB`;
+  }
+  if (datasetSizeInfo?.sizeInMiB > 0.1) {
     return `Dataset size: ${datasetSizeInfo.sizeInMiB.toFixed(4)} MB`;
   }
-  if (datasetSizeInfo?.sizeInMiB < 0.1 && datasetSizeInfo?.sizeInKiB > 0.1) {
+  if (datasetSizeInfo?.sizeInKiB > 0.1) {
     return `Dataset size: ${datasetSizeInfo?.sizeInKiB.toFixed(4)} KB`;
   }
   return `Dataset size: ${datasetSizeInfo?.sizeInBytes} Bytes`;

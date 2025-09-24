@@ -95,10 +95,12 @@ export default function Home() {
           variants={itemVariants}
           whileHover={{ scale: 1.05 }}
           transition={{ duration: 0.3 }}
-          className="text-3xl font-bold uppercase tracking-tighter text-foreground flex items-center gap-2"
+          className="text-3xl font-bold uppercase tracking-tighter text-foreground flex flex-col sm:flex-row items-center gap-2"
         >
-          <Filecoin />
-          Filecoin onchain cloud
+          <div className="flex items-center gap-2">
+            <Filecoin />
+            <span>Filecoin onchain cloud</span>
+          </div>
           <motion.a
             whileHover={{ scale: 1.3 }}
             href="https://github.com/FIL-Builders/fs-upload-dapp"
@@ -109,9 +111,9 @@ export default function Home() {
           </motion.a>
           <motion.p
             variants={itemVariants}
-            className="text-xl font-semibold lowercase transition-colors duration-50 hover:text-foreground flex items-center gap-2"
+            className="text-xl font-semibold lowercase transition-colors duration-50 hover:text-foreground flex flex-col sm:flex-row items-center gap-2"
           >
-            powered by
+            <span>powered by</span>
             <motion.a
               href="https://github.com/FilOzone/synapse-sdk"
               className="text-primary transition-colors duration-200 hover:underline cursor-pointer hover:text-[#008cf6] rounded-md p-1"
@@ -124,9 +126,9 @@ export default function Home() {
 
         <motion.p
           variants={itemVariants}
-          className="text-lg font-semibold capitalize-none transition-colors duration-50 mb-2  mt-1 hover:text-foreground flex items-center gap-2 text-center"
+          className="text-lg font-semibold capitalize-none transition-colors duration-50 mb-2 mt-1 hover:text-foreground flex flex-col sm:flex-row items-center gap-2 text-center"
         >
-          upload files to filecoin with{" "}
+          <span>upload files to filecoin with</span>
           <motion.a
             href="https://docs.secured.finance/usdfc-stablecoin/getting-started"
             className="text-[#e9ac00] hover:underline cursor-pointer"
@@ -134,7 +136,7 @@ export default function Home() {
           >
             USDFC
           </motion.a>
-          your balance is
+          <span>your balance is</span>
           <span className="font-bold">
             {isLoadingBalances || !isConnected
               ? "..."
@@ -144,11 +146,17 @@ export default function Home() {
         {chainId !== 314159 && (
           <motion.p
             variants={itemVariants}
-            className="text-lg font-semibold capitalize-none transition-colors duration-50 mb-2  mt-1 hover:text-foreground flex items-center gap-2 text-center"
+            className="text-lg font-semibold capitalize-none transition-colors duration-50 mb-2 mt-1 hover:text-foreground flex flex-col sm:flex-row items-center gap-2 text-center"
           >
-            <span className="max-w-xl text-center bg-red-600/70  p-2 rounded-md">
-              ⚠️ Filecoin mainnet is not supported yet. Please use Filecoin
-              Calibration network.
+            <span className="max-w-xl text-center bg-red-600/70 p-2 rounded-md">
+              ⚠️{" "}
+              <span className="hidden sm:inline">
+                Filecoin mainnet is not supported yet. Please use Filecoin
+                Calibration network.
+              </span>
+              <span className="sm:hidden">
+                Mainnet not supported. Use Calibration network.
+              </span>
             </span>
           </motion.p>
         )}
@@ -174,7 +182,10 @@ export default function Home() {
                 <ConnectButton />
               </motion.div>
               <motion.p variants={itemVariants} className="mt-3 text-secondary">
-                Please connect your wallet to upload dApp
+                <span className="hidden sm:inline">
+                  Please connect your wallet to upload dApp
+                </span>
+                <span className="sm:hidden">Connect wallet to continue</span>
               </motion.p>
             </motion.div>
           ) : (

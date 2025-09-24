@@ -1,11 +1,17 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { EnhancedDataSetInfo, PDPServer } from "@filoz/synapse-sdk";
+import {
+  DataSetPieceData,
+  EnhancedDataSetInfo,
+  PDPServer,
+} from "@filoz/synapse-sdk";
 import { useAccount } from "wagmi";
 import { DataSet } from "@/types";
 import { useSynapse } from "@/providers/SynapseProvider";
 import { getDatasetsSizeInfo } from "@/utils/calculateStorageMetrics";
+import { getPieceInfoFromCidBytes } from "@/utils/cids";
+import { PieceSizeInfo } from "@/types";
 
 /**
  * Hook to fetch and manage user datasets from Filecoin storage
@@ -33,8 +39,10 @@ export const useDatasets = () => {
   const { synapse } = useSynapse();
 
   return useQuery({
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
     enabled: !!address,
-    queryKey: ["datasets", address],
+    queryKey: ["get-datasets", address],
     queryFn: async () => {
       // STEP 1: Validate prerequisites
       if (!synapse) throw new Error("Synapse not found");
@@ -68,11 +76,25 @@ export const useDatasets = () => {
               dataset.pdpVerifierDataSetId
             );
 
+            console.log("dataSetData", data);
+
+            // CID PARSING METHOD: For exact piece sizes matching smart contract logic
+            // Process pieces and calculate exact sizes from CID bytes
+            const pieces = data.pieces.reduce(
+              (acc, piece: DataSetPieceData) => {
+                acc[piece.pieceCid.toV1().toString()] =
+                  getPieceInfoFromCidBytes(piece.pieceCid.bytes);
+                return acc;
+              },
+              {} as Record<string, PieceSizeInfo>
+            );
+
             return {
               ...dataset,
               provider: provider,
               serviceURL: serviceURL,
               data, // Contains pieces array with CIDs
+              pieceSizes: pieces,
               ...datasetsSizeInfo[dataset.pdpVerifierDataSetId],
             } as DataSet;
           } catch (error) {
@@ -85,7 +107,7 @@ export const useDatasets = () => {
               ...dataset,
               provider: provider,
               serviceURL: serviceURL,
-              message: "datasetsSizeInfo[dataset.pdpVerifierDataSetId].message",
+              ...datasetsSizeInfo[dataset.pdpVerifierDataSetId],
             } as unknown as DataSet;
           }
         })

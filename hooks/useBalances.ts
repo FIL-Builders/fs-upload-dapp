@@ -11,12 +11,14 @@ import { useSynapse } from "@/providers/SynapseProvider";
  */
 export const useBalances = () => {
   const { synapse } = useSynapse();
-  const { address } = useAccount();
+  const { address, isConnected, isConnecting, isReconnecting } = useAccount();
 
   const query = useQuery({
-    queryKey: ["balances", address],
+    queryKey: ["get-balances", address, isConnected, isConnecting, isReconnecting],
+    enabled: isConnected && !isConnecting && !isReconnecting,
     queryFn: async (): Promise<UseBalancesResponse> => {
       if (!synapse) throw new Error("Synapse not found");
+      if (!address) throw new Error("Address not found");
 
       // Fetch raw balances
       const [filRaw, usdfcRaw, paymentsRaw] = await Promise.all([
