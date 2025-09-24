@@ -3,6 +3,7 @@ import { Synapse } from "@filoz/synapse-sdk";
 import { fileTypeFromBuffer } from "file-type";
 import { useEthersSigner } from "./useEthers";
 import { config } from "@/config";
+import { getQueryKey } from "@/utils/constants";
 
 async function identifyFileType(uint8Array: Uint8Array) {
   const fileType = await fileTypeFromBuffer(uint8Array);
@@ -17,7 +18,7 @@ export const useDownloadPiece = (commp: string, filename: string) => {
 
   const mutation = useMutation({
     // Keep keys serializable to avoid circular JSON errors
-    mutationKey: ["download-piece", commp, filename],
+    mutationKey: getQueryKey("download", commp),
     mutationFn: async () => {
       if (!signer) throw new Error("Signer not found");
 

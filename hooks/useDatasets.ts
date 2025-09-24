@@ -14,6 +14,7 @@ import { PieceSizeInfo } from "@/types";
 import { useEthersSigner } from "./useEthers";
 import { Synapse } from "@filoz/synapse-sdk";
 import { config } from "@/config";
+import { getQueryKey } from "@/utils/constants";
 
 /**
  * Hook to fetch and manage user datasets from Filecoin storage
@@ -40,10 +41,7 @@ export const useDatasets = () => {
   const { address } = useAccount();
   const signer = useEthersSigner();
   return useQuery({
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
-    enabled: !!address,
-    queryKey: ["get-datasets", address],
+    queryKey: getQueryKey("datasets", address),
     queryFn: async () => {
       // STEP 1: Validate prerequisites
       if (!signer) throw new Error("Signer not found");
@@ -80,9 +78,6 @@ export const useDatasets = () => {
             const data = await pdpServer.getDataSet(
               dataset.pdpVerifierDataSetId
             );
-
-            console.log("dataSetData", data);
-
             // CID PARSING METHOD: For exact piece sizes matching smart contract logic
             // Process pieces and calculate exact sizes from CID bytes
             const pieces = data.pieces.reduce(

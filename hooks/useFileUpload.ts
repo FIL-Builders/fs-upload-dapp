@@ -6,6 +6,7 @@ import { preflightCheck } from "@/utils/preflightCheck";
 import { Synapse } from "@filoz/synapse-sdk";
 import { useEthersSigner } from "./useEthers";
 import { config } from "@/config";
+import { getQueryKey } from "@/utils/constants";
 
 export type UploadedInfo = {
   fileName?: string;
@@ -25,7 +26,7 @@ export const useFileUpload = () => {
   const { address } = useAccount();
   const signer = useEthersSigner();
   const mutation = useMutation({
-    mutationKey: ["file-upload", address],
+    mutationKey: getQueryKey("upload", address),
     mutationFn: async (file: File) => {
       if (!signer) throw new Error("Signer not found");
       if (!address) throw new Error("Address not found");

@@ -2,11 +2,23 @@
 import { useState, useCallback } from "react";
 import { useAccount } from "wagmi";
 import { useFileUpload } from "@/hooks/useFileUpload";
+import { useQueryClient } from "@tanstack/react-query";
+import { getAllQueryKeys } from "@/utils/constants";
+import { useEffect } from "react";
 
 export const FileUploader = () => {
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const { isConnected } = useAccount();
+  const { address } = useAccount();
+
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (address) {
+      queryClient.invalidateQueries({ queryKey: getAllQueryKeys(address) });
+    }
+  }, [address]);
 
   const { uploadFileMutation, uploadedInfo, handleReset, status, progress } =
     useFileUpload();

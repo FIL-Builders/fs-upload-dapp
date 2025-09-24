@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Synapse, TOKENS } from "@filoz/synapse-sdk";
 import { useAccount } from "wagmi";
 import { calculateStorageMetrics } from "@/utils/calculateStorageMetrics";
@@ -6,23 +6,17 @@ import { formatUnits } from "viem";
 import { defaultBalances, UseBalancesResponse } from "@/types";
 import { useEthersSigner } from "./useEthers";
 import { config } from "@/config";
+import { getQueryKey } from "@/utils/constants";
 
 /**
  * Hook to fetch and format wallet balances and storage metrics
  */
 export const useBalances = () => {
-  const { address, isConnected, isConnecting, isReconnecting } = useAccount();
+  const { address } = useAccount();
   const signer = useEthersSigner();
 
   const query = useQuery({
-    queryKey: [
-      "get-balances",
-      address,
-      isConnected,
-      isConnecting,
-      isReconnecting,
-    ],
-    enabled: isConnected && !isConnecting && !isReconnecting,
+    queryKey: getQueryKey("balances", address),
     queryFn: async (): Promise<UseBalancesResponse> => {
       if (!signer) throw new Error("Signer not found");
       if (!address) throw new Error("Address not found");

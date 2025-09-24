@@ -7,6 +7,9 @@ import { StorageCard } from "./StorageCard";
 import { StorageOverview } from "./StorageOverview";
 import { WalletBalances } from "./WalletBalances";
 import { PaymentActions } from "./PaymentActions";
+import { useQueryClient } from "@tanstack/react-query";
+import { getAllQueryKeys } from "@/utils/constants";
+import { useEffect } from "react";
 
 /**
  * 🚀 Simplified Storage Manager Component
@@ -22,7 +25,7 @@ import { PaymentActions } from "./PaymentActions";
  * ```
  */
 export const StorageManager = () => {
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
 
   // Simplified data fetching
   const {
@@ -30,6 +33,14 @@ export const StorageManager = () => {
     isLoading: isBalanceLoading,
     refetch: refetchBalances,
   } = useBalances();
+
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (address) {
+      queryClient.invalidateQueries({ queryKey: getAllQueryKeys(address) });
+    }
+  }, [address]);
 
   const { mutation: paymentMutation, status } = usePayment();
   const { mutateAsync: handlePayment, isPending: isProcessingPayment } =

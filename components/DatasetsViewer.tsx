@@ -7,10 +7,22 @@ import { useDownloadPiece } from "@/hooks/useDownloadPiece";
 import { DataSet } from "@/types";
 import { DataSetPieceData } from "@filoz/synapse-sdk";
 import { CopyableURL } from "@/components/ui/CopyableURL";
+import { useQueryClient } from "@tanstack/react-query";
+import { getAllQueryKeys } from "@/utils/constants";
+import { useEffect } from "react";
 
 export const DatasetsViewer = () => {
   const { isConnected } = useAccount();
+  const { address } = useAccount();
   const { data, isLoading: isLoadingDatasets } = useDatasets();
+
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (address) {
+      queryClient.invalidateQueries({ queryKey: getAllQueryKeys(address) });
+    }
+  }, [address]);
 
   if (!isConnected) {
     return null;
