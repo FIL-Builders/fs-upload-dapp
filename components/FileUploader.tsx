@@ -11,8 +11,11 @@ export const FileUploader = () => {
   const { uploadFileMutation, uploadedInfo, handleReset, status, progress } =
     useFileUpload();
 
-  const { isPending: isUploading, mutateAsync: uploadFile } =
-    uploadFileMutation;
+  const {
+    isPending: isUploading,
+    mutateAsync: uploadFile,
+    isError,
+  } = uploadFileMutation;
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -107,20 +110,22 @@ export const FileUploader = () => {
             if (!file) return;
             await uploadFile(file);
           }}
-          disabled={!file || isUploading || !!uploadedInfo}
-          aria-disabled={!file || isUploading}
+          disabled={(!file || isUploading || !!uploadedInfo) && !isError}
+          aria-disabled={(!file || isUploading || !!uploadedInfo) && !isError}
           className={`px-6 py-2 rounded-[20px] text-center border-2 transition-all
             ${
-              !file || isUploading || uploadedInfo
+              (!file || isUploading || !!uploadedInfo) && !isError
                 ? "border-gray-200 text-gray-400 cursor-not-allowed"
                 : "border-secondary text-secondary hover:bg-secondary/70 hover:text-secondary-foreground focus:outline-none focus:ring-2 focus:ring-secondary/50 hover:border-secondary/70 hover:cursor-pointer"
             }
           `}
         >
-          {isUploading
+          {isUploading && !isError
             ? "Uploading..."
             : !uploadedInfo
             ? "Submit"
+            : isError
+            ? "Error(Try again) 🔄"
             : "Submitted"}
         </button>
         <button
@@ -128,11 +133,11 @@ export const FileUploader = () => {
             handleReset();
             setFile(null);
           }}
-          disabled={!file || isUploading}
-          aria-disabled={!file || isUploading}
+          disabled={!file || (isUploading && !isError)}
+          aria-disabled={!file || (isUploading && !isError)}
           className={`px-6 py-2 rounded-[20px] text-center border-2 transition-all
             ${
-              !file || isUploading
+              !file || (isUploading && !isError)
                 ? "border-gray-200 text-gray-400 cursor-not-allowed"
                 : "border-secondary text-secondary hover:bg-secondary/70 hover:text-secondary-foreground focus:outline-none focus:ring-2 focus:ring-secondary/50 hover:border-secondary/70 hover:cursor-pointer"
             }

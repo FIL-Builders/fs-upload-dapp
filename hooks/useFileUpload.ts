@@ -3,8 +3,9 @@ import { useMutation } from "@tanstack/react-query";
 import { useConfetti } from "@/hooks/useConfetti";
 import { useAccount } from "wagmi";
 import { preflightCheck } from "@/utils/preflightCheck";
-import { useSynapse } from "@/providers/SynapseProvider";
 import { Synapse } from "@filoz/synapse-sdk";
+import { useEthersSigner } from "./useEthers";
+import { config } from "@/config";
 
 export type UploadedInfo = {
   fileName?: string;
@@ -20,17 +21,22 @@ export const useFileUpload = () => {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("");
   const [uploadedInfo, setUploadedInfo] = useState<UploadedInfo | null>(null);
-  const { synapse } = useSynapse();
   const { triggerConfetti } = useConfetti();
   const { address } = useAccount();
+  const signer = useEthersSigner();
   const mutation = useMutation({
     mutationKey: ["file-upload", address],
     mutationFn: async (file: File) => {
-      if (!synapse) throw new Error("Synapse not found");
+      if (!signer) throw new Error("Signer not found");
       if (!address) throw new Error("Address not found");
       setProgress(0);
       setUploadedInfo(null);
       setStatus("🔄 Initializing file upload to Filecoin...");
+
+      const synapse = await Synapse.create({
+        signer,
+        withCDN: config.withCDN,
+      });
 
       // 1) Convert File → ArrayBuffer
       const arrayBuffer = await file.arrayBuffer();
@@ -98,6 +104,10 @@ export const useFileUpload = () => {
       setProgress(55);
       // 8) Upload file to storage provider
       const { pieceCid } = await storageService.upload(uint8ArrayBytes, {
+        metadata: {
+          fileName: file.name,
+          fileSize: file.size.toString(),
+        },
         onUploadComplete: (piece) => {
           setStatus(
             `📊 File uploaded! Signing msg to add pieces to the dataset`

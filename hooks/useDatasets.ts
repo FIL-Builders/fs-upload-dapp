@@ -1,10 +1,19 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { EnhancedDataSetInfo, PDPServer } from "@filoz/synapse-sdk";
+import {
+  DataSetPieceData,
+  EnhancedDataSetInfo,
+  PDPServer,
+} from "@filoz/synapse-sdk";
 import { useAccount } from "wagmi";
 import { DataSet } from "@/types";
-import { useSynapse } from "@/providers/SynapseProvider";
+import { getDatasetsSizeInfo } from "@/utils/calculateStorageMetrics";
+import { getPieceInfoFromCidBytes } from "@/utils/cids";
+import { PieceSizeInfo } from "@/types";
+import { useEthersSigner } from "./useEthers";
+import { Synapse } from "@filoz/synapse-sdk";
+import { config } from "@/config";
 
 /**
  * Hook to fetch and manage user datasets from Filecoin storage
@@ -29,68 +38,41 @@ import { useSynapse } from "@/providers/SynapseProvider";
  */
 export const useDatasets = () => {
   const { address } = useAccount();
-  const { synapse, warmStorageService } = useSynapse();
-
+  const signer = useEthersSigner();
   return useQuery({
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
     enabled: !!address,
-    queryKey: ["datasets", address],
+    queryKey: ["get-datasets", address],
     queryFn: async () => {
       // STEP 1: Validate prerequisites
-      if (!synapse) throw new Error("Synapse not found");
-      if (!address) throw new Error("Address not found");
-      if (!warmStorageService)
-        throw new Error("Warm storage service not found");
-      // Initialize WarmStorage service for dataset management
+      if (!signer) throw new Error("Signer not found");
+      const synapse = await Synapse.create({
+        signer,
+        withCDN: config.withCDN,
+      });
 
       // STEP 3: Fetch providers and datasets in parallel for efficiency
-      const [providerIds, datasets] = await Promise.all([
-        warmStorageService.getApprovedProviderIds(),
-        warmStorageService.getClientDataSetsWithDetails(address),
-      ]);
-
-      // STEP 4: Create provider ID to address mapping from datasets
-      const providerIdToAddressMap = datasets.reduce((acc, dataset) => {
-        acc[dataset.providerId] = dataset.payee;
-        return acc;
-      }, {} as Record<number, string>);
+      const datasets = await synapse.storage.findDataSets();
 
       // STEP 5: Fetch provider information with error handling
-      const providers = await Promise.all(
-        providerIds.map(async (providerId) => {
-          const providerAddress = providerIdToAddressMap[providerId];
-          if (!providerAddress) {
-            return null; // Skip if no address mapping exists
-          }
-          try {
-            return await synapse.getProviderInfo(providerId);
-          } catch (error) {
-            console.warn(`Failed to fetch provider ${providerId}:`, error);
-            return null; // Continue with other providers
-          }
-        })
-      );
+      const datasetsSizeInfo = await getDatasetsSizeInfo(datasets, synapse);
 
-      // Filter out failed provider requests
-      const filteredProviders = providers.filter(
-        (provider) => provider !== null
+      const providers = await Promise.all(
+        datasets.map((dataset) => synapse.getProviderInfo(dataset.providerId))
       );
 
       // STEP 6: Create provider ID to service URL mapping
-      const providerIdToServiceUrlMap = filteredProviders.reduce(
-        (acc, provider) => {
-          acc[provider.id] = provider.products.PDP?.data.serviceURL || "";
-          return acc;
-        },
-        {} as Record<string, string>
-      );
+      const providerIdToServiceUrlMap = providers.reduce((acc, provider) => {
+        acc[provider.id] = provider.products.PDP?.data.serviceURL || "";
+        return acc;
+      }, {} as Record<string, string>);
 
       // STEP 7: Fetch detailed dataset information with PDP data
-      const datasetDetailsPromises = datasets.map(
-        async (dataset: EnhancedDataSetInfo) => {
+      const datasetDataResults = await Promise.all(
+        datasets.map(async (dataset: EnhancedDataSetInfo) => {
           const serviceURL = providerIdToServiceUrlMap[dataset.providerId];
-          const provider = filteredProviders.find(
-            (p) => p.id === dataset.providerId
-          );
+          const provider = providers.find((p) => p.id === dataset.providerId);
 
           try {
             // Connect to PDP server to get piece information
@@ -99,11 +81,26 @@ export const useDatasets = () => {
               dataset.pdpVerifierDataSetId
             );
 
+            console.log("dataSetData", data);
+
+            // CID PARSING METHOD: For exact piece sizes matching smart contract logic
+            // Process pieces and calculate exact sizes from CID bytes
+            const pieces = data.pieces.reduce(
+              (acc, piece: DataSetPieceData) => {
+                acc[piece.pieceCid.toV1().toString()] =
+                  getPieceInfoFromCidBytes(piece.pieceCid.bytes);
+                return acc;
+              },
+              {} as Record<string, PieceSizeInfo>
+            );
+
             return {
               ...dataset,
               provider: provider,
               serviceURL: serviceURL,
               data, // Contains pieces array with CIDs
+              pieceSizes: pieces,
+              ...datasetsSizeInfo[dataset.pdpVerifierDataSetId],
             } as DataSet;
           } catch (error) {
             console.warn(
@@ -115,13 +112,11 @@ export const useDatasets = () => {
               ...dataset,
               provider: provider,
               serviceURL: serviceURL,
+              ...datasetsSizeInfo[dataset.pdpVerifierDataSetId],
             } as unknown as DataSet;
           }
-        }
+        })
       );
-
-      // STEP 8: Wait for all dataset details to resolve
-      const datasetDataResults = await Promise.all(datasetDetailsPromises);
 
       // STEP 9: Map results back to original dataset order
       const datasetsWithDetails = datasets.map((dataset) => {
