@@ -1,6 +1,13 @@
 import { useMutation } from "@tanstack/react-query";
 import { useSynapse } from "@/providers/SynapseProvider";
 
+import {fileTypeFromBuffer} from 'file-type';
+
+async function identifyFileType(uint8Array: Uint8Array) {
+    const fileType = await fileTypeFromBuffer(uint8Array);
+    return fileType;
+}
+
 /**
  * Hook to download a piece from the Filecoin network using Synapse.
  */
@@ -15,7 +22,10 @@ export const useDownloadPiece = (commp: string, filename: string) => {
 
       const uint8ArrayBytes = await synapse.storage.download(commp);
 
-      const file = new File([uint8ArrayBytes as BlobPart], filename);
+      const fileType = await identifyFileType(uint8ArrayBytes);
+      console.log("fileType", fileType);
+
+      const file = new File([uint8ArrayBytes as BlobPart], filename, { type: fileType?.mime });
 
       // Download file to browser
       const url = URL.createObjectURL(file);

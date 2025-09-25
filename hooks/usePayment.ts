@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useConfetti } from "@/hooks/useConfetti";
 import { TOKENS, TIME_CONSTANTS } from "@filoz/synapse-sdk";
-import { DATA_SET_CREATION_FEE, MAX_UINT256 } from "@/utils";
+import { DATA_SET_CREATION_FEE } from "@/utils";
 import { useAccount } from "wagmi";
 import { config } from "@/config";
 import { useSynapse } from "@/providers/SynapseProvider";
@@ -22,6 +22,7 @@ export const usePayment = () => {
   const { address } = useAccount();
   const { synapse, warmStorageService } = useSynapse();
   const mutation = useMutation({
+    mutationKey: ["payment", address],
     mutationFn: async ({
       lockupAllowance,
       epochRateAllowance,
@@ -60,20 +61,20 @@ export const usePayment = () => {
         throw new Error("Insufficient USDFC balance");
       }
 
-      if (allowance < MAX_UINT256 / 2n) {
+      if (allowance < amount) {
         setStatus("💰 Approving USDFC to cover storage costs...");
         const transaction = await synapse.payments.approve(
           paymentsAddress,
-          MAX_UINT256,
+          amount,
           TOKENS.USDFC
         );
-        await transaction.wait();
+        await transaction.wait(1);
         setStatus("💰 Successfully approved USDFC to cover storage costs");
       }
       if (amount > 0n) {
         setStatus("💰 Depositing USDFC to cover storage costs...");
         const transaction = await synapse.payments.deposit(amount);
-        await transaction.wait();
+        await transaction.wait(1);
         setStatus("💰 Successfully deposited USDFC to cover storage costs");
       }
 

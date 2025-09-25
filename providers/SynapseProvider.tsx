@@ -1,12 +1,11 @@
 "use client";
 
-import {
-  Synapse,
-  WarmStorageService,
-} from "@filoz/synapse-sdk";
+import { Synapse, WarmStorageService } from "@filoz/synapse-sdk";
 import { createContext, useState, useEffect, useContext } from "react";
 import { useEthersSigner } from "@/hooks/useEthers";
 import { config } from "@/config";
+import { useAccount } from "wagmi";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const SynapseContext = createContext<{
   synapse: Synapse | null;
@@ -18,33 +17,39 @@ export const SynapseProvider = ({
 }: {
   children: React.ReactNode;
 }) => {
-  const [synapse, setSynapse] = useState<Synapse | null>(null);
-
-  const [warmStorageService, setWarmStorageService] =
-    useState<WarmStorageService | null>(null);
+  const [context, setContext] = useState<{
+    synapse: Synapse | null;
+    warmStorageService: WarmStorageService | null;
+  }>({ synapse: null, warmStorageService: null });
   const signer = useEthersSigner();
+  const { address } = useAccount();
+  const queryClient = useQueryClient();
 
   const createSynapse = async () => {
     if (!signer) return;
+
+    const synapseAddress = await context.synapse?.getSigner().getAddress();
+    if (synapseAddress !== address) {
+      console.table({ synapseAddress, address });
+      queryClient.clear();
+    }
     const synapse = await Synapse.create({
       signer,
       withCDN: config.withCDN,
-      disableNonceManager: false,
     });
 
     const warmStorageService = await WarmStorageService.create(
       synapse.getProvider(),
       synapse.getWarmStorageAddress()
     );
-    setSynapse(synapse);
-    setWarmStorageService(warmStorageService);
+    setContext({ synapse, warmStorageService });
   };
   useEffect(() => {
     createSynapse();
-  }, [signer]);
+  }, [signer, address]);
 
   return (
-    <SynapseContext.Provider value={{ synapse, warmStorageService }}>
+    <SynapseContext.Provider value={context}>
       {children}
     </SynapseContext.Provider>
   );

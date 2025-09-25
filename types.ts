@@ -4,9 +4,65 @@ import {
   EnhancedDataSetInfo,
 } from "@filoz/synapse-sdk";
 
-export interface DataSet extends EnhancedDataSetInfo {
+/**
+ * Unified size interface that consolidates storage size calculations
+ * Standardizes on consistent naming patterns and supports both dataset and piece contexts
+ * All calculations use GiB (1024^3) for internal consistency, GB (1000^3) for user display
+ */
+export interface UnifiedSizeInfo {
+  /** Size in bytes - primary measurement */
+  sizeBytes: bigint;
+  /** Size in KiB (1024 bytes) */
+  sizeKiB: number;
+  /** Size in MiB (1024^2 bytes) */
+  sizeMiB: number;
+  /** Size in GiB (1024^3 bytes) - standardized for calculations */
+  sizeGiB: number;
+  /** Whether CDN storage is enabled for this item */
+  withCDN?: boolean;
+  /** Number of merkle tree leaves */
+  leafCount?: number;
+  /** Number of pieces */
+  pieceCount?: number;
+  /** User-friendly size message */
+  message?: string;
+}
+
+/**
+ * Dataset-specific size information
+ * Uses standardized UnifiedSizeInfo with required dataset fields
+ */
+
+export interface DatasetsSizeInfo {
+  leafCount: number;
+  pieceCount: number;
+  withCDN: boolean;
+  sizeInBytes: number;
+  sizeInKiB: number;
+  sizeInMiB: number;
+  sizeInGB: number;
+  message: string;
+}
+
+/**
+ * Piece-specific size information
+ * Uses standardized UnifiedSizeInfo with piece-specific fields
+ */
+export interface PieceSizeInfo extends UnifiedSizeInfo {
+  /** Padding information for piece */
+  padding: bigint;
+  /** Height in merkle tree */
+  height: number;
+  /** Digest hex value (0x-prefixed) */
+  digestHex: string;
+  /** Whether padding is excessive */
+  isPaddingExcessive: boolean;
+}
+
+export interface DataSet extends EnhancedDataSetInfo, DatasetsSizeInfo {
   data: DataSetData | null;
   provider: ProviderInfo | null;
+  pieceSizes: Record<string, PieceSizeInfo>;
 }
 
 export interface DatasetsResponse {
@@ -29,11 +85,14 @@ export interface UseBalancesResponse {
   isRateSufficient: boolean;
   isLockupSufficient: boolean;
   rateNeeded: bigint;
+  cdnUsedGiB: number;
+  nonCdnUsedGiB: number;
   totalLockupNeeded: bigint;
   depositNeeded: bigint;
   currentRateAllowanceGB: number;
   currentStorageGB: number;
   currentLockupAllowance: bigint;
+  totalDatasets: number;
 }
 
 export const defaultBalances: UseBalancesResponse = {
@@ -49,11 +108,14 @@ export const defaultBalances: UseBalancesResponse = {
   isRateSufficient: false,
   isLockupSufficient: false,
   rateNeeded: 0n,
+  cdnUsedGiB: 0,
+  nonCdnUsedGiB: 0,
   totalLockupNeeded: 0n,
   depositNeeded: 0n,
   currentRateAllowanceGB: 0,
   currentStorageGB: 0,
   currentLockupAllowance: 0n,
+  totalDatasets: 0,
 };
 
 /**
@@ -88,6 +150,10 @@ export interface StorageCalculationResult {
   currentStorageBytes: bigint;
   /** The current storage usage in GB */
   currentStorageGB: number;
+  /** The current storage usage in GB */
+  cdnUsedGiB: number;
+  /** The current storage usage in GB */
+  nonCdnUsedGiB: number;
   /** The required lockup amount needed for storage persistence */
   totalLockupNeeded: bigint;
   /** The additional lockup amount needed for storage persistence */
@@ -106,35 +172,8 @@ export interface StorageCalculationResult {
   currentRateAllowanceGB: number;
   /** The current lockup allowance in USDFC */
   currentLockupAllowance: bigint;
-}
-
-export interface PaymentActionProps extends SectionProps {
-  totalLockupNeeded?: bigint;
-  currentLockupAllowance?: bigint;
-  rateNeeded?: bigint;
-  depositNeeded?: bigint;
-  isProcessingPayment: boolean;
-  onPayment: (params: {
-    lockupAllowance: bigint;
-    epochRateAllowance: bigint;
-    depositAmount: bigint;
-  }) => Promise<void>;
-  handleRefetchBalances: () => Promise<void>;
-}
-
-export interface StatusMessageProps {
-  status?: string;
-}
-
-export interface SectionProps {
-  balances?: UseBalancesResponse;
-  isLoading?: boolean;
-}
-
-export interface AllowanceItemProps {
-  label: string;
-  isSufficient?: boolean;
-  isLoading?: boolean;
+  /** The total number of datasets */
+  totalDatasets: number;
 }
 
 export interface StorageCosts {

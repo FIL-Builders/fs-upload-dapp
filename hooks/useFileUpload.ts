@@ -98,6 +98,10 @@ export const useFileUpload = () => {
       setProgress(55);
       // 8) Upload file to storage provider
       const { pieceCid } = await storageService.upload(uint8ArrayBytes, {
+        metadata: {
+          fileName: file.name,
+          fileSize: file.size.toString(),
+        },
         onUploadComplete: (piece) => {
           setStatus(
             `📊 File uploaded! Signing msg to add pieces to the dataset`

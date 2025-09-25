@@ -1,12 +1,19 @@
-import { Synapse, TIME_CONSTANTS, SIZE_CONSTANTS } from "@filoz/synapse-sdk";
+import {
+  Synapse,
+  TIME_CONSTANTS,
+  SIZE_CONSTANTS,
+  PDPVerifier,
+  EnhancedDataSetInfo,
+} from "@filoz/synapse-sdk";
 import { config } from "@/config";
-import { StorageCalculationResult } from "@/types";
+import { StorageCalculationResult, DatasetsSizeInfo } from "@/types";
 import { calculateRateAllowanceGB } from "@/utils/storageCostUtils";
 import {
-  calculateCurrentStorageUsage,
   fetchWarmStorageCosts,
   fetchWarmStorageBalanceData,
 } from "@/utils/warmStorageUtils";
+
+const LEAF_SIZE = 32n;
 
 /**
  * Calculates storage metrics for WarmStorage service based on balance data and user config.
@@ -41,6 +48,19 @@ export const calculateStorageMetrics = async (
   const lockupPerDayAtCurrentRate =
     TIME_CONSTANTS.EPOCHS_PER_DAY * warmStorageBalance.currentRateUsed;
 
+  const datasets = await synapse.storage.findDataSets();
+
+  const datasetsSizeInfo = await getDatasetsSizeInfo(datasets, synapse);
+
+  const currentStorageBytes = Object.values(datasetsSizeInfo).reduce(
+    (acc, dataset) => acc + dataset.sizeInBytes,
+    0
+  );
+  const currentStorageGB = Object.values(datasetsSizeInfo).reduce(
+    (acc, dataset) => acc + dataset.sizeInGB,
+    0
+  );
+
   // Calculate remaining lockup and persistence days
   const currentLockupRemaining =
     warmStorageBalance.currentLockupAllowance -
@@ -56,10 +76,6 @@ export const calculateStorageMetrics = async (
       ? Infinity
       : 0;
 
-  // Calculate current storage usage (in bytes and GB)
-  const { currentStorageBytes, currentStorageGB } =
-    calculateCurrentStorageUsage(warmStorageBalance, storageCapacityBytes);
-
   // Determine sufficiency of allowances
   const isRateSufficient =
     warmStorageBalance.currentRateAllowance >= rateNeeded;
@@ -74,6 +90,13 @@ export const calculateStorageMetrics = async (
     storageCosts
   );
 
+  const cdnUsedGiB = Object.values(datasetsSizeInfo)
+    .filter((dataset) => dataset.withCDN)
+    .reduce((acc, dataset) => acc + dataset.sizeInGB, 0);
+  const nonCdnUsedGiB = Object.values(datasetsSizeInfo)
+    .filter((dataset) => !dataset.withCDN)
+    .reduce((acc, dataset) => acc + dataset.sizeInGB, 0);
+
   const depositNeeded = warmStorageBalance.depositAmountNeeded;
   const rateUsed = warmStorageBalance.currentRateUsed;
   const totalLockupNeeded = warmStorageBalance.lockupAllowanceNeeded;
@@ -81,8 +104,10 @@ export const calculateStorageMetrics = async (
   return {
     rateNeeded, // rate needed per epoch for requested storage
     rateUsed: rateUsed, // rate currently used
-    currentStorageBytes, // current storage used in bytes
+    currentStorageBytes: BigInt(currentStorageBytes), // current storage used in bytes
     currentStorageGB, // current storage used in GB
+    cdnUsedGiB, // current storage used in GB
+    nonCdnUsedGiB, // current storage used in GB
     totalLockupNeeded, // total lockup needed
     depositNeeded, // deposit needed for storage
     persistenceDaysLeft, // days of storage left at requested rate
@@ -92,5 +117,134 @@ export const calculateStorageMetrics = async (
     isSufficient, // are both sufficient?
     currentRateAllowanceGB, // how much storage (GB) current rate allowance supports
     currentLockupAllowance, // current lockup allowance
+    totalDatasets: datasets.length, // total datasets
   };
+};
+
+export const getDatasetsSizeInfo = async (
+  datasets: EnhancedDataSetInfo[],
+  synapse: Synapse
+) => {
+  try {
+    const pdpVerifier = new PDPVerifier(
+      synapse.getProvider(),
+      synapse.getPDPVerifierAddress()
+    );
+    if (!datasets || datasets.length === 0) {
+      return {} as Record<number, DatasetsSizeInfo>;
+    }
+
+    const entries = await Promise.all(
+      datasets.map(async (dataset) => {
+        const [leafCountRaw, pieceCountRaw] = await Promise.all([
+          pdpVerifier.getDataSetLeafCount(dataset.pdpVerifierDataSetId),
+          pdpVerifier.getNextPieceId(dataset.pdpVerifierDataSetId),
+        ]);
+
+        const leafCount = Number(leafCountRaw);
+        const pieceCount = Number(pieceCountRaw);
+        const withCDN = dataset.withCDN;
+
+        const sizeInBytes = leafCount * Number(LEAF_SIZE);
+        const sizeInKiB = sizeInBytes / Number(SIZE_CONSTANTS.KiB);
+        const sizeInMiB = sizeInBytes / Number(SIZE_CONSTANTS.MiB);
+        const sizeInGB = sizeInBytes / Number(SIZE_CONSTANTS.GiB);
+
+        const info = {
+          leafCount,
+          pieceCount,
+          withCDN,
+          sizeInBytes,
+          sizeInKiB,
+          sizeInMiB,
+          sizeInGB,
+        };
+
+        const message = getDatasetSizeMessage(info);
+
+        const dataSetSizeInfo: DatasetsSizeInfo = {
+          ...info,
+          message,
+        };
+
+        return [dataset.pdpVerifierDataSetId, dataSetSizeInfo] as const;
+      })
+    );
+
+    return Object.fromEntries(entries) as Record<number, DatasetsSizeInfo>;
+  } catch (error) {
+    console.warn("Failed to get datasets size info:", error);
+    return {} as Record<number, DatasetsSizeInfo>;
+  }
+};
+
+export const getDatasetsSizeMessage = (
+  datasetsSizeInfo: Record<number, Omit<DatasetsSizeInfo, "message">>
+) => {
+  if (Object.keys(datasetsSizeInfo).length === 0) {
+    return "No datasets found";
+  }
+  const sizeInGB = Object.values(datasetsSizeInfo).reduce(
+    (acc, dataset) => acc + dataset?.sizeInGB,
+    0
+  );
+  const sizeInMB = Object.values(datasetsSizeInfo).reduce(
+    (acc, dataset) => acc + dataset?.sizeInMiB,
+    0
+  );
+  const sizeInKB = Object.values(datasetsSizeInfo).reduce(
+    (acc, dataset) => acc + dataset?.sizeInKiB,
+    0
+  );
+  const sizeInBytes = Object.values(datasetsSizeInfo).reduce(
+    (acc, dataset) => acc + dataset?.sizeInBytes,
+    0
+  );
+  if (sizeInGB < 0.1 && sizeInMB > 0.1) {
+    return `Dataset size: ${sizeInMB} MB`;
+  }
+  if (sizeInMB < 0.1 && sizeInKB > 0.1) {
+    return `Dataset size: ${sizeInKB} KB`;
+  }
+  return `Dataset size: ${sizeInBytes} Bytes`;
+};
+
+export const getDatasetSizeMessage = (datasetSizeInfo: {
+  leafCount: number;
+  pieceCount: number;
+  withCDN: boolean;
+  sizeInBytes: number;
+  sizeInKiB: number;
+  sizeInMiB: number;
+  sizeInGB: number;
+}) => {
+  if (datasetSizeInfo?.sizeInGB > 0.1) {
+    return `Dataset size: ${datasetSizeInfo.sizeInGB.toFixed(4)} GB`;
+  }
+  if (datasetSizeInfo?.sizeInMiB > 0.1) {
+    return `Dataset size: ${datasetSizeInfo.sizeInMiB.toFixed(4)} MB`;
+  }
+  if (datasetSizeInfo?.sizeInKiB > 0.1) {
+    return `Dataset size: ${datasetSizeInfo?.sizeInKiB.toFixed(4)} KB`;
+  }
+  return `Dataset size: ${datasetSizeInfo?.sizeInBytes} Bytes`;
+};
+
+export const getStorageUsage = (
+  datasetsSizeInfo: Record<number, DatasetsSizeInfo>
+): {
+  usageInBytes: number;
+  usageInKiB: number;
+  usageInMiB: number;
+  usageInGB: number;
+} => {
+  return Object.values(datasetsSizeInfo).reduce(
+    (acc, dataset) => ({
+      usageInBytes: acc.usageInBytes + dataset?.sizeInBytes,
+      usageInKiB: acc.usageInKiB + dataset?.sizeInKiB,
+      usageInMiB: acc.usageInMiB + dataset?.sizeInMiB,
+      usageInGB: acc.usageInGB + dataset?.sizeInGB,
+    }),
+    { usageInBytes: 0, usageInKiB: 0, usageInMiB: 0, usageInGB: 0 }
+  );
 };

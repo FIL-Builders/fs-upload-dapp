@@ -2,7 +2,6 @@ import { config } from "@/config";
 import { WarmStorageBalance, StorageCosts } from "@/types";
 import { DATA_SET_CREATION_FEE } from "@/utils/constants";
 import {
-  SIZE_CONSTANTS,
   Synapse,
   TIME_CONSTANTS,
   WarmStorageService,
@@ -45,41 +44,6 @@ export const fetchWarmStorageBalanceData = async (
     synapse.payments,
     persistencePeriodDays
   );
-};
-
-/**
- * Calculates current storage usage based on rate usage and storage capacity.
- *
- * @param warmStorageBalance - The WarmStorage balance data
- * @param storageCapacityBytes - The storage capacity in bytes
- * @returns Object with currentStorageBytes and currentStorageGB
- */
-export const calculateCurrentStorageUsage = (
-  warmStorageBalance: WarmStorageBalance,
-  storageCapacityBytes: number
-): { currentStorageBytes: bigint; currentStorageGB: number } => {
-  let currentStorageBytes = 0n;
-  let currentStorageGB = 0;
-
-  if (
-    warmStorageBalance.currentRateUsed > 0n &&
-    warmStorageBalance.rateAllowanceNeeded > 0n
-  ) {
-    try {
-      // Proportionally calculate storage usage based on rate used
-      currentStorageBytes =
-        (warmStorageBalance.currentRateUsed * BigInt(storageCapacityBytes)) /
-        warmStorageBalance.rateAllowanceNeeded;
-      // Convert bytes to GB
-      currentStorageGB =
-        Number(currentStorageBytes) / Number(SIZE_CONSTANTS.GiB);
-      console.log("currentStorageGB", currentStorageGB);
-    } catch (error) {
-      console.warn("Failed to calculate current storage usage:", error);
-    }
-  }
-
-  return { currentStorageBytes, currentStorageGB };
 };
 
 /**
