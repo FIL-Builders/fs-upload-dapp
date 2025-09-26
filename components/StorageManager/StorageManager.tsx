@@ -1,15 +1,13 @@
 "use client";
 
-import { useAccount } from "wagmi";
+import { useAccount, useWatchAsset } from "wagmi";
 import { useBalances } from "@/hooks/useBalances";
 import { usePayment } from "@/hooks/usePayment";
 import { StorageCard } from "./StorageCard";
 import { StorageOverview } from "./StorageOverview";
 import { WalletBalances } from "./WalletBalances";
 import { PaymentActions } from "./PaymentActions";
-import { useQueryClient } from "@tanstack/react-query";
-import { getAllQueryKeys } from "@/utils/constants";
-import { useEffect } from "react";
+import { useMemo } from "react";
 
 /**
  * 🚀 Simplified Storage Manager Component
@@ -25,7 +23,7 @@ import { useEffect } from "react";
  * ```
  */
 export const StorageManager = () => {
-  const { isConnected, address } = useAccount();
+  const { isConnected } = useAccount();
 
   // Simplified data fetching
   const {
@@ -34,13 +32,18 @@ export const StorageManager = () => {
     refetch: refetchBalances,
   } = useBalances();
 
-  const queryClient = useQueryClient();
+  const addAsset = useWatchAsset();
 
-  useEffect(() => {
-    if (address) {
-      queryClient.invalidateQueries({ queryKey: getAllQueryKeys(address) });
-    }
-  }, [address]);
+  const handleAddAsset = async () => {
+    addAsset.watchAsset({
+      type: "ERC20",
+      options: {
+        address: "0xb3042734b608a1B16e9e86B374A3f3e389B4cDf0",
+        symbol: "USDFC",
+        decimals: 18,
+      },
+    });
+  };
 
   const { mutation: paymentMutation, status } = usePayment();
   const { mutateAsync: handlePayment, isPending: isProcessingPayment } =
@@ -84,6 +87,12 @@ export const StorageManager = () => {
               }}
             >
               Get tFIL
+            </button>
+            <button
+              className="px-4 py-2 text-sm h-9 flex items-center justify-center rounded-lg border-2 border-black transition-all bg-black text-white hover:bg-white hover:text-black"
+              onClick={handleAddAsset}
+            >
+              Add USDFC
             </button>
           </div>
         </div>
