@@ -5,7 +5,7 @@
 
 export const config = {
   // The number of GB of storage capacity needed to be sufficient
-  storageCapacity: 10,
+  storageCapacity: 100,
   // The number of days of lockup needed to be sufficient
   persistencePeriod: 30,
   // The minimum number of days of lockup needed to be sufficient
