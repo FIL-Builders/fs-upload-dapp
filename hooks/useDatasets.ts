@@ -41,6 +41,7 @@ export const useDatasets = () => {
   const { address } = useAccount();
   const signer = useEthersSigner();
   return useQuery({
+    enabled: !!address && signer?.address === address,
     queryKey: getQueryKey("datasets", address),
     queryFn: async () => {
       // STEP 1: Validate prerequisites

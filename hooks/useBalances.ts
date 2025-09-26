@@ -1,8 +1,8 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Synapse, TOKENS } from "@filoz/synapse-sdk";
 import { useAccount } from "wagmi";
 import { calculateStorageMetrics } from "@/utils/calculateStorageMetrics";
-import { formatUnits } from "viem";
+import { Address, formatUnits } from "viem";
 import { defaultBalances, UseBalancesResponse } from "@/types";
 import { useEthersSigner } from "./useEthers";
 import { config } from "@/config";
@@ -16,6 +16,7 @@ export const useBalances = () => {
   const signer = useEthersSigner();
 
   const query = useQuery({
+    enabled: !!address && signer?.address === address,
     queryKey: getQueryKey("balances", address),
     queryFn: async (): Promise<UseBalancesResponse> => {
       if (!signer) throw new Error("Signer not found");
