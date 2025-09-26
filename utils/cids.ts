@@ -1,4 +1,4 @@
-import { SIZE_CONSTANTS } from "@filoz/synapse-sdk";
+import { DecimalUnitConverter } from "@/utils/decimalUtils";
 import { PieceSizeInfo } from "@/types";
 
 /**
@@ -156,10 +156,9 @@ export function getPieceInfoFromCidBytes(
   const excessive = isPaddingExcessive(parsed.padding, parsed.height);
 
   // Convert to human-readable numbers where appropriate
-  const sizeBytesNumber = Number(sizeBytes);
-  const sizeKiB = sizeBytesNumber / Number(SIZE_CONSTANTS.KiB);
-  const sizeMiB = sizeBytesNumber / Number(SIZE_CONSTANTS.MiB);
-  const sizeGiB = sizeBytesNumber / Number(SIZE_CONSTANTS.GiB);
+  const sizeKiB = DecimalUnitConverter.bytesToKiB(sizeBytes).toNumber();
+  const sizeMiB = DecimalUnitConverter.bytesToMiB(sizeBytes).toNumber();
+  const sizeGiB = DecimalUnitConverter.bytesToGiB(sizeBytes).toNumber();
 
   return {
     padding: parsed.padding,

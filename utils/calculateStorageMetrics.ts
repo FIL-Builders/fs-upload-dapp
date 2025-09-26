@@ -4,6 +4,7 @@ import {
   SIZE_CONSTANTS,
   PDPVerifier,
   EnhancedDataSetInfo,
+  TOKENS,
 } from "@filoz/synapse-sdk";
 import { config } from "@/config";
 import { StorageCalculationResult, DatasetsSizeInfo } from "@/types";
@@ -12,8 +13,8 @@ import {
   fetchWarmStorageCosts,
   fetchWarmStorageBalanceData,
 } from "@/utils/warmStorageUtils";
-
-const LEAF_SIZE = 32n;
+import { DecimalUnitConverter } from "./decimalUtils";
+import { LEAF_SIZE } from "@/utils/constants";
 
 /**
  * Calculates storage metrics for WarmStorage service based on balance data and user config.
@@ -63,8 +64,11 @@ export const calculateStorageMetrics = async (
 
   // Calculate remaining lockup and persistence days
   const currentLockupRemaining =
-    warmStorageBalance.currentLockupAllowance -
-    warmStorageBalance.currentLockupUsed;
+    warmStorageBalance.currentLockupAllowance >
+    warmStorageBalance.currentLockupUsed
+      ? warmStorageBalance.currentLockupAllowance -
+        warmStorageBalance.currentLockupUsed
+      : 0n;
   // How many days of storage remain at requested rate
   const persistenceDaysLeft =
     Number(currentLockupRemaining) / Number(lockupPerDay);
@@ -97,9 +101,16 @@ export const calculateStorageMetrics = async (
     .filter((dataset) => !dataset.withCDN)
     .reduce((acc, dataset) => acc + dataset.sizeInGB, 0);
 
-  const depositNeeded = warmStorageBalance.depositAmountNeeded;
+  const storageBalance = await synapse.payments.balance(TOKENS.USDFC);
+
+  const depositNeeded =
+    storageBalance > warmStorageBalance.depositAmountNeeded
+      ? 0n
+      : warmStorageBalance.depositAmountNeeded;
   const rateUsed = warmStorageBalance.currentRateUsed;
-  const totalLockupNeeded = warmStorageBalance.lockupAllowanceNeeded;
+  const totalLockupNeeded =
+    warmStorageBalance.currentLockupUsed +
+    BigInt(persistencePeriodDays) * BigInt(lockupPerDay);
   const currentLockupAllowance = warmStorageBalance.currentLockupAllowance;
   return {
     rateNeeded, // rate needed per epoch for requested storage
@@ -145,16 +156,19 @@ export const getDatasetsSizeInfo = async (
         const pieceCount = Number(pieceCountRaw);
         const withCDN = dataset.withCDN;
 
-        const sizeInBytes = leafCount * Number(LEAF_SIZE);
-        const sizeInKiB = sizeInBytes / Number(SIZE_CONSTANTS.KiB);
-        const sizeInMiB = sizeInBytes / Number(SIZE_CONSTANTS.MiB);
-        const sizeInGB = sizeInBytes / Number(SIZE_CONSTANTS.GiB);
+        const sizeInBytes = BigInt(leafCountRaw) * LEAF_SIZE;
+        const sizeInKiB =
+          DecimalUnitConverter.bytesToKiB(sizeInBytes).toNumber();
+        const sizeInMiB =
+          DecimalUnitConverter.bytesToMiB(sizeInBytes).toNumber();
+        const sizeInGB =
+          DecimalUnitConverter.bytesToGiB(sizeInBytes).toNumber();
 
         const info = {
           leafCount,
           pieceCount,
           withCDN,
-          sizeInBytes,
+          sizeInBytes: Number(sizeInBytes),
           sizeInKiB,
           sizeInMiB,
           sizeInGB,
@@ -185,19 +199,19 @@ export const getDatasetsSizeMessage = (
     return "No datasets found";
   }
   const sizeInGB = Object.values(datasetsSizeInfo).reduce(
-    (acc, dataset) => acc + dataset?.sizeInGB,
+    (acc, dataset) => acc + dataset.sizeInGB,
     0
   );
   const sizeInMB = Object.values(datasetsSizeInfo).reduce(
-    (acc, dataset) => acc + dataset?.sizeInMiB,
+    (acc, dataset) => acc + dataset.sizeInMiB,
     0
   );
   const sizeInKB = Object.values(datasetsSizeInfo).reduce(
-    (acc, dataset) => acc + dataset?.sizeInKiB,
+    (acc, dataset) => acc + dataset.sizeInKiB,
     0
   );
   const sizeInBytes = Object.values(datasetsSizeInfo).reduce(
-    (acc, dataset) => acc + dataset?.sizeInBytes,
+    (acc, dataset) => acc + dataset.sizeInBytes,
     0
   );
   if (sizeInGB < 0.1 && sizeInMB > 0.1) {
@@ -225,9 +239,9 @@ export const getDatasetSizeMessage = (datasetSizeInfo: {
     return `Dataset size: ${datasetSizeInfo.sizeInMiB.toFixed(4)} MB`;
   }
   if (datasetSizeInfo?.sizeInKiB > 0.1) {
-    return `Dataset size: ${datasetSizeInfo?.sizeInKiB.toFixed(4)} KB`;
+    return `Dataset size: ${datasetSizeInfo.sizeInKiB.toFixed(4)} KB`;
   }
-  return `Dataset size: ${datasetSizeInfo?.sizeInBytes} Bytes`;
+  return `Dataset size: ${datasetSizeInfo.sizeInBytes} Bytes`;
 };
 
 export const getStorageUsage = (
@@ -240,10 +254,10 @@ export const getStorageUsage = (
 } => {
   return Object.values(datasetsSizeInfo).reduce(
     (acc, dataset) => ({
-      usageInBytes: acc.usageInBytes + dataset?.sizeInBytes,
-      usageInKiB: acc.usageInKiB + dataset?.sizeInKiB,
-      usageInMiB: acc.usageInMiB + dataset?.sizeInMiB,
-      usageInGB: acc.usageInGB + dataset?.sizeInGB,
+      usageInBytes: acc.usageInBytes + dataset.sizeInBytes,
+      usageInKiB: acc.usageInKiB + dataset.sizeInKiB,
+      usageInMiB: acc.usageInMiB + dataset.sizeInMiB,
+      usageInGB: acc.usageInGB + dataset.sizeInGB,
     }),
     { usageInBytes: 0, usageInKiB: 0, usageInMiB: 0, usageInGB: 0 }
   );
