@@ -11,7 +11,16 @@ import { DATA_SET_CREATION_FEE } from "@/utils";
 import { useAccount } from "wagmi";
 import { config } from "@/config";
 import { useEthersSigner } from "./useEthers";
+import {
+  erc20PermitAbi,
+  EIP2612_PERMIT_TYPES,
+  paymentsAbi,
+} from "@/utils/constants";
+import { Address } from "viem";
 
+import { erc20Abi, parseSignature } from "viem";
+import { usePublicClient, useWalletClient } from "wagmi";
+import { MULTICALL_ADDRESS, USDFC_ADDRESS } from "@/utils/constants";
 /**
  * Hook to handle payment for storage
  * @param lockup - The lockup amount to be used for the storage
@@ -24,7 +33,9 @@ import { useEthersSigner } from "./useEthers";
 export const usePayment = () => {
   const [status, setStatus] = useState<string>("");
   const { triggerConfetti } = useConfetti();
-  const { address } = useAccount();
+  const { data: walletClient } = useWalletClient();
+  const publicClient = usePublicClient();
+  const { address, chainId } = useAccount();
   const signer = useEthersSigner();
   const mutation = useMutation({
     mutationKey: ["payment", address],
@@ -39,7 +50,10 @@ export const usePayment = () => {
     }) => {
       if (!address) throw new Error("Address not found");
       if (!signer) throw new Error("Signer not found");
-      setStatus("🔄 Preparing transaction...");
+      if (!publicClient) throw new Error("Public client not found");
+      if (!walletClient) throw new Error("Wallet client not found");
+      if (!address) throw new Error("Address not found");
+      if (!chainId) throw new Error("Chain id not found");
 
       const synapse = await Synapse.create({
         signer,
@@ -51,7 +65,8 @@ export const usePayment = () => {
         synapse.getWarmStorageAddress()
       );
 
-      const paymentsAddress = synapse.getPaymentsAddress();
+      const paymentsAddress = synapse.getPaymentsAddress() as Address;
+      const warmStorageAddress = synapse.getWarmStorageAddress() as Address;
 
       const dataset = (
         await warmStorageService.getClientDataSetsWithDetails(address)
@@ -63,47 +78,94 @@ export const usePayment = () => {
 
       const amount = depositAmount + fee;
 
-      const allowance = await synapse.payments.allowance(
-        paymentsAddress,
-        TOKENS.USDFC
-      );
-
       const balance = await synapse.payments.walletBalance(TOKENS.USDFC);
 
       if (balance < amount) {
         throw new Error("Insufficient USDFC balance");
       }
 
-      if (allowance < amount) {
-        setStatus("💰 Approving USDFC to cover storage costs...");
-        const transaction = await synapse.payments.approve(
-          paymentsAddress,
-          amount,
-          TOKENS.USDFC
-        );
-        await transaction.wait(1);
-        setStatus("💰 Successfully approved USDFC to cover storage costs");
-      }
-      if (amount > 0n) {
-        setStatus("💰 Depositing USDFC to cover storage costs...");
-        const transaction = await synapse.payments.deposit(amount);
-        await transaction.wait(1);
-        setStatus("💰 Successfully deposited USDFC to cover storage costs");
-      }
+      setStatus("💰 Setting up your storage configuration...");
 
-      setStatus(
-        "💰 Approving Filecoin Warm Storage service USDFC spending rates..."
+      const permitDeadline: bigint = BigInt(
+        Math.floor(Date.now() / 1000) + 3600
       );
-      const transaction = await synapse.payments.approveService(
-        synapse.getWarmStorageAddress(),
-        epochRateAllowance,
-        lockupAllowance + fee,
-        TIME_CONSTANTS.EPOCHS_PER_DAY * BigInt(config.persistencePeriod)
-      );
-      await transaction.wait();
-      setStatus(
-        "💰 Successfully approved Filecoin Warm Storage spending rates"
-      );
+
+      const [nonce, domainVersion, tokenName] = await publicClient
+        .multicall({
+          multicallAddress: MULTICALL_ADDRESS,
+          contracts: [
+            {
+              address: USDFC_ADDRESS,
+              abi: erc20PermitAbi,
+              functionName: "nonces",
+              args: [address],
+            },
+            {
+              address: USDFC_ADDRESS,
+              abi: erc20PermitAbi,
+              functionName: "version",
+            },
+            {
+              address: USDFC_ADDRESS,
+              abi: erc20Abi,
+              functionName: "name",
+            },
+          ],
+        })
+        .then((results) => {
+          return results.map((result) => result.result);
+        });
+
+      const domain = {
+        name: tokenName as unknown as string,
+        version: domainVersion as unknown as string,
+        chainId,
+        verifyingContract: USDFC_ADDRESS,
+      };
+
+      const value = {
+        owner: address,
+        spender: paymentsAddress,
+        value: amount,
+        nonce: nonce,
+        deadline: permitDeadline,
+      };
+
+      let signatureHex = await walletClient.signTypedData({
+        account: address,
+        primaryType: "Permit",
+        domain,
+        types: EIP2612_PERMIT_TYPES,
+        message: value,
+      });
+
+      const signature = parseSignature(signatureHex);
+
+      const tx = await walletClient.writeContract({
+        address: paymentsAddress,
+        abi: paymentsAbi,
+        functionName: "depositWithPermitAndApproveOperator",
+        args: [
+          USDFC_ADDRESS,
+          address,
+          amount,
+          permitDeadline,
+          signature.v as unknown as number,
+          signature.r,
+          signature.s,
+          warmStorageAddress,
+          epochRateAllowance,
+          lockupAllowance,
+          TIME_CONSTANTS.EPOCHS_PER_DAY * BigInt(config.persistencePeriod),
+        ],
+      });
+
+      await publicClient.waitForTransactionReceipt({
+        hash: tx,
+      });
+
+      setStatus("💰 You successfully configured your storage");
+      return;
     },
     onSuccess: () => {
       setStatus("✅ Payment was successful!");
