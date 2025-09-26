@@ -58,14 +58,20 @@ export const PaymentActions = ({
     return (
       <div className="p-4 bg-green-50 rounded-lg border border-green-200">
         <p className="text-green-800">
-          ✅ Your storage balance is sufficient for {config.storageCapacity}GB
-          of storage for {balances.persistenceDaysLeft?.toFixed(5)} days.
+          ✅ All set. Capacity {config.storageCapacity} GB • Days left{" "}
+          {balances.persistenceDaysLeft?.toFixed(1)} • Plan{" "}
+          {config.persistencePeriod} days{config.withCDN ? " • CDN On" : ""}.
         </p>
       </div>
     );
   }
 
-  const depositNeeded = Number(formatUnits(balances?.depositNeeded ?? 0n, 18)).toFixed(5);
+  const depositNeeded = Number(
+    formatUnits(balances?.depositNeeded ?? 0n, 18)
+  ).toFixed(5);
+  const needsDeposit = (balances.depositNeeded ?? 0n) > 0n;
+  const needsLockup = !balances.isLockupSufficient;
+  const needsRate = !balances.isRateSufficient;
 
   // Missing tokens
   if (balances.filBalance === 0n || balances.usdfcBalance === 0n) {
@@ -73,100 +79,53 @@ export const PaymentActions = ({
       <div className="space-y-4">
         {balances.filBalance === 0n && (
           <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-            <p className="text-red-800">
-              ⚠️ You need FIL tokens to pay for transaction fees. Please
-              deposit FIL tokens to your wallet.
-            </p>
+            <p className="text-red-800">⚠️ Add FIL for network fees.</p>
           </div>
         )}
         {balances.usdfcBalance === 0n && (
           <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-            <p className="text-red-800">
-              ⚠️ You need USDFC tokens to pay for storage. Please deposit USDFC
-              tokens to your wallet.
-            </p>
+            <p className="text-red-800">⚠️ Add USDFC for storage payments.</p>
           </div>
         )}
       </div>
     );
   }
 
-  // Rate sufficient, need lockup increase
-  if (balances.isRateSufficient && !balances.isLockupSufficient) {
-    return (
-      <div className="space-y-4">
-        <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-          <p className="text-yellow-800">
-            ⚠️ Deposit {depositNeeded} USDFC to extend storage.
-          </p>
-        </div>
-        <PaymentButton
-          onClick={async () => {
-            await onPayment({
-              lockupAllowance: balances.totalLockupNeeded!,
-              epochRateAllowance: balances.rateNeeded!,
-              depositAmount: balances.depositNeeded!,
-            });
-            await onRefreshBalances();
-          }}
-          isProcessing={isProcessingPayment}
-          label="Deposit & Increase Lockup"
-        />
+  return (
+    <div className="space-y-4">
+      <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+        <p className="text-red-800">⚠️ Action needed</p>
+        <ul className="text-red-800 list-disc pl-5 mt-1 space-y-1">
+          {needsDeposit && <li>Deposit {depositNeeded} USDFC</li>}
+          {needsLockup && (
+            <li>
+              Extend lockup to ≥ {config.minDaysThreshold} days (have{" "}
+              {balances.persistenceDaysLeft?.toFixed(1)}d)
+            </li>
+          )}
+          {needsRate && (
+            <li>Increase capacity to {config.storageCapacity} GB</li>
+          )}
+        </ul>
+        <p className="text-xs text-red-700 mt-2">
+          Target: {config.storageCapacity} GB • Plan {config.persistencePeriod}{" "}
+          days • CDN {config.withCDN ? "On" : "Off"}
+        </p>
       </div>
-    );
-  }
-
-  // Lockup sufficient, need rate increase
-  if (!balances.isRateSufficient && balances.isLockupSufficient) {
-    return (
-      <div className="space-y-4">
-        <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-          <p className="text-yellow-800">
-            ⚠️ Increase rate allowance for more storage.
-          </p>
-        </div>
-        <PaymentButton
-          onClick={async () => {
-            await onPayment({
-              lockupAllowance: balances.currentLockupAllowance!,
-              epochRateAllowance: balances.rateNeeded!,
-              depositAmount: 0n,
-            });
-            await onRefreshBalances();
-          }}
-          isProcessing={isProcessingPayment}
-          label="Increase Rate"
-        />
-      </div>
-    );
-  }
-
-  // Both insufficient
-  if (!balances.isRateSufficient && !balances.isLockupSufficient) {
-    return (
-      <div className="space-y-4">
-        <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-          <p className="text-red-800">
-            ⚠️ Insufficient storage balance. Deposit {depositNeeded} USDFC and increase rate allowance.
-          </p>
-        </div>
-        <PaymentButton
-          onClick={async () => {
-            await onPayment({
-              lockupAllowance: balances.totalLockupNeeded!,
-              epochRateAllowance: balances.rateNeeded!,
-              depositAmount: balances.depositNeeded!,
-            });
-            await onRefreshBalances();
-          }}
-          isProcessing={isProcessingPayment}
-          label="Deposit & Increase Allowances"
-        />
-      </div>
-    );
-  }
-
-  return null;
+      <PaymentButton
+        onClick={async () => {
+          await onPayment({
+            lockupAllowance: balances.totalLockupNeeded!,
+            epochRateAllowance: balances.rateNeeded!,
+            depositAmount: balances.depositNeeded!,
+          });
+          await onRefreshBalances();
+        }}
+        isProcessing={isProcessingPayment}
+        label="Deposit & Increase Allowances"
+      />
+    </div>
+  );
 };
 
 interface PaymentButtonProps {
@@ -175,7 +134,11 @@ interface PaymentButtonProps {
   label: string;
 }
 
-const PaymentButton = ({ onClick, isProcessing, label }: PaymentButtonProps) => (
+const PaymentButton = ({
+  onClick,
+  isProcessing,
+  label,
+}: PaymentButtonProps) => (
   <button
     onClick={onClick}
     disabled={isProcessing}
