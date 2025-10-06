@@ -1,11 +1,14 @@
-import { config } from "@/config";
-import { WarmStorageBalance, StorageCosts } from "@/types";
-import { DATA_SET_CREATION_FEE } from "@/utils/constants";
+import { WarmStorageBalance, StorageCosts, DatasetsSizeInfo } from "@/types";
+import { DATA_SET_CREATION_FEE, LEAF_SIZE } from "@/utils/constants";
 import {
   Synapse,
   TIME_CONSTANTS,
   WarmStorageService,
+  PDPVerifier,
+  EnhancedDataSetInfo,
+  SIZE_CONSTANTS,
 } from "@filoz/synapse-sdk";
+import { bytesToKiB, bytesToMiB, bytesToGiB } from "./storageCalculations";
 
 /**
  * Fetches the current storage costs from the WarmStorage service.
@@ -27,12 +30,14 @@ export const fetchWarmStorageCosts = async (
  * @param synapse - The Synapse instance
  * @param storageCapacityBytes - Storage capacity in bytes
  * @param persistencePeriodDays - Desired persistence period in days
+ * @param withCDN - Whether to use CDN for storage
  * @returns The WarmStorage balance data object
  */
 export const fetchWarmStorageBalanceData = async (
   synapse: Synapse,
   storageCapacityBytes: number,
-  persistencePeriodDays: number
+  persistencePeriodDays: number,
+  withCDN: boolean
 ): Promise<WarmStorageBalance> => {
   const warmStorageService = await WarmStorageService.create(
     synapse.getProvider(),
@@ -40,7 +45,7 @@ export const fetchWarmStorageBalanceData = async (
   );
   return warmStorageService.checkAllowanceForStorage(
     storageCapacityBytes,
-    config.withCDN,
+    withCDN,
     synapse.payments,
     persistencePeriodDays
   );
@@ -67,8 +72,12 @@ export const checkAllowances = async (
 
   // Calculate remaining lockup and persistence days
   const currentLockupRemaining =
-    warmStorageBalance.currentLockupAllowance -
-    warmStorageBalance.currentLockupUsed;
+    warmStorageBalance.currentLockupAllowance >
+    warmStorageBalance.currentLockupUsed
+      ? warmStorageBalance.currentLockupAllowance -
+        warmStorageBalance.currentLockupUsed
+      : 0n;
+  warmStorageBalance.currentLockupUsed;
 
   // Calculate total allowance needed including dataset creation fee if required
   const dataSetCreationFee = includeDataSetCreationFee
@@ -120,4 +129,115 @@ export const checkAllowances = async (
     lockupPerDay, // lockup needed per day
     persistenceDaysLeft, // days of persistence left
   };
+};
+
+export const getDatasetsSizeInfo = async (
+  datasets: EnhancedDataSetInfo[],
+  synapse: Synapse
+) => {
+  try {
+    const pdpVerifier = new PDPVerifier(
+      synapse.getProvider(),
+      synapse.getPDPVerifierAddress()
+    );
+    if (!datasets || datasets.length === 0) {
+      return {} as Record<number, DatasetsSizeInfo>;
+    }
+
+    const entries = await Promise.all(
+      datasets.map(async (dataset) => {
+        const [leafCountRaw, pieceCountRaw] = await Promise.all([
+          pdpVerifier.getDataSetLeafCount(dataset.pdpVerifierDataSetId),
+          pdpVerifier.getNextPieceId(dataset.pdpVerifierDataSetId),
+        ]);
+
+        const leafCount = Number(leafCountRaw);
+        const pieceCount = Number(pieceCountRaw);
+        const withCDN = dataset.withCDN;
+
+        const sizeInBytes = BigInt(leafCountRaw) * LEAF_SIZE;
+        const sizeInKiB = bytesToKiB(sizeInBytes).toNumber();
+        const sizeInMiB = bytesToMiB(sizeInBytes).toNumber();
+        const sizeInGB = bytesToGiB(sizeInBytes).toNumber();
+
+        const info = {
+          leafCount,
+          pieceCount,
+          withCDN,
+          sizeInBytes: Number(sizeInBytes),
+          sizeInKiB,
+          sizeInMiB,
+          sizeInGB,
+        };
+
+        const message = getDatasetSizeMessage(info);
+
+        const dataSetSizeInfo: DatasetsSizeInfo = {
+          ...info,
+          message,
+        };
+
+        return [dataset.pdpVerifierDataSetId, dataSetSizeInfo] as const;
+      })
+    );
+
+    return Object.fromEntries(entries) as Record<number, DatasetsSizeInfo>;
+  } catch (error) {
+    console.warn("Failed to get datasets size info:", error);
+    return {} as Record<number, DatasetsSizeInfo>;
+  }
+};
+
+export const getDatasetSizeMessage = (datasetSizeInfo: {
+  leafCount: number;
+  pieceCount: number;
+  withCDN: boolean;
+  sizeInBytes: number;
+  sizeInKiB: number;
+  sizeInMiB: number;
+  sizeInGB: number;
+}) => {
+  if (datasetSizeInfo.sizeInGB > 0.1) {
+    return `Dataset size: ${datasetSizeInfo.sizeInGB.toFixed(4)} GB`;
+  }
+  if (datasetSizeInfo.sizeInMiB > 0.1) {
+    return `Dataset size: ${datasetSizeInfo.sizeInMiB.toFixed(4)} MB`;
+  }
+  if (datasetSizeInfo.sizeInKiB > 0.1) {
+    return `Dataset size: ${datasetSizeInfo.sizeInKiB.toFixed(4)} KB`;
+  }
+  return `Dataset size: ${datasetSizeInfo.sizeInBytes} Bytes`;
+};
+
+/**
+ * Returns the price per TiB per month, depending on CDN usage.
+ * @param storageCosts - The storage cost object from WarmStorage service
+ * @param withCDN - Whether to use CDN for storage
+ * @returns The price per TiB per month as a bigint
+ */
+export const getPricePerTBPerMonth = (storageCosts: StorageCosts, withCDN: boolean): bigint => {
+  return withCDN
+    ? storageCosts.pricePerTiBPerMonthWithCDN
+    : storageCosts.pricePerTiBPerMonthNoCDN;
+};
+
+/**
+ * Calculates the storage capacity in GB that can be supported by a given rate allowance.
+ * @param rateAllowance - The current rate allowance (bigint)
+ * @param storageCosts - The storage cost object from WarmStorage service
+ * @param withCDN - Whether to use CDN for storage
+ * @returns The number of GB that can be supported by the rate allowance
+ */
+export const calculateRateAllowanceGB = (
+  rateAllowance: bigint,
+  storageCosts: StorageCosts,
+  withCDN: boolean
+): number => {
+  // Calculate the total monthly rate allowance
+  const monthlyRate = rateAllowance * BigInt(TIME_CONSTANTS.EPOCHS_PER_MONTH);
+  // Calculate how many bytes can be stored for that rate
+  const bytesThatCanBeStored =
+    (monthlyRate * SIZE_CONSTANTS.TiB) / getPricePerTBPerMonth(storageCosts, withCDN);
+  // Convert bytes to GB
+  return Number(bytesThatCanBeStored) / Number(SIZE_CONSTANTS.GiB);
 };
