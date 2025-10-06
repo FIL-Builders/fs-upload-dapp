@@ -16,10 +16,9 @@ import * as React from "react";
 import { Navbar } from "@/components/ui/Navbar";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { ConfettiProvider } from "@/providers/ConfettiProvider";
+import { ConfigProvider } from "@/providers/ConfigProvider";
 import Footer from "@/components/ui/Footer";
 import { GeolocationProvider } from "@/providers/GeolocationProvider";
-
-// Defer importing wallets/connectors to the client to avoid SSR IndexedDB usage
 
 const queryClient = new QueryClient();
 
@@ -65,9 +64,7 @@ export default function RootLayout({
         chains: [filecoinCalibration],
         connectors: wagmiConnectors,
         transports: {
-          [filecoinCalibration.id]: http(
-            "https://rpc.ankr.com/filecoin_testnet"
-          ),
+          [filecoinCalibration.id]: http(),
         },
       });
 
@@ -100,26 +97,28 @@ export default function RootLayout({
             console.log("blocked", info);
           }}
         >
-          <ThemeProvider>
-            <ConfettiProvider>
-              <QueryClientProvider client={queryClient}>
-                {wagmiConfig ? (
-                  <WagmiProvider config={wagmiConfig}>
-                    <RainbowKitProvider
-                      modalSize="compact"
-                      initialChain={filecoinCalibration.id}
-                    >
-                      <main className="flex flex-col min-h-screen">
-                        <Navbar />
-                        {children}
-                      </main>
-                      <Footer />
-                    </RainbowKitProvider>
-                  </WagmiProvider>
-                ) : null}
-              </QueryClientProvider>
-            </ConfettiProvider>
-          </ThemeProvider>
+          <ConfigProvider>
+            <ThemeProvider>
+              <ConfettiProvider>
+                <QueryClientProvider client={queryClient}>
+                  {wagmiConfig ? (
+                    <WagmiProvider config={wagmiConfig}>
+                      <RainbowKitProvider
+                        modalSize="compact"
+                        initialChain={filecoinCalibration.id}
+                      >
+                        <main className="flex flex-col min-h-screen">
+                          <Navbar />
+                          {children}
+                        </main>
+                        <Footer />
+                      </RainbowKitProvider>
+                    </WagmiProvider>
+                  ) : null}
+                </QueryClientProvider>
+              </ConfettiProvider>
+            </ThemeProvider>
+          </ConfigProvider>
         </GeolocationProvider>
       </body>
     </html>

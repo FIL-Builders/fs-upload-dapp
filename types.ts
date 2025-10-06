@@ -180,3 +180,16 @@ export interface StorageCosts {
   pricePerTiBPerMonthNoCDN: bigint;
   pricePerTiBPerMonthWithCDN: bigint;
 }
+
+export type ConfigType = {
+  storageCapacity: number;
+  persistencePeriod: number;
+  minDaysThreshold: number;
+  withCDN: boolean;
+};
+
+export type ConfigContextType = {
+  config: ConfigType;
+  updateConfig: (newConfig: Partial<ConfigType>) => void;
+  resetConfig: () => void;
+};

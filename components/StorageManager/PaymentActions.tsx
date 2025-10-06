@@ -1,7 +1,7 @@
 "use client";
 
 import { formatUnits } from "viem";
-import { config } from "@/config";
+import { useConfig } from "@/providers/ConfigProvider";
 
 interface PaymentPayload {
   lockupAllowance: bigint;
@@ -51,6 +51,7 @@ export const PaymentActions = ({
   onPayment,
   onRefreshBalances,
 }: PaymentActionsProps) => {
+  const { config } = useConfig();
   if (isLoading || !balances) return null;
 
   // Success state
