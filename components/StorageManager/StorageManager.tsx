@@ -7,20 +7,80 @@ import { StorageCard } from "./StorageCard";
 import { StorageOverview } from "./StorageOverview";
 import { WalletBalances } from "./WalletBalances";
 import { PaymentActions } from "./PaymentActions";
-import { useMemo } from "react";
 
 /**
- * 🚀 Simplified Storage Manager Component
+ * Comprehensive Storage Manager Component for Filecoin Storage Operations
+ *
+ * @description
+ * The StorageManager is the main dashboard component for managing Filecoin storage.
+ * It provides a unified interface for viewing storage metrics, managing balances,
+ * and performing payment operations. The component is designed with a composable
+ * architecture using smaller, focused components for maximum reusability.
+ *
+ * @functionality
+ * - **Real-time Balance Monitoring**: Displays FIL, USDFC, and warm storage balances
+ * - **Storage Overview**: Shows current storage usage, capacity, and persistence days
+ * - **CDN vs Standard Storage**: Separate tracking for premium and standard storage
+ * - **Payment Operations**: Integrated payment flow for storage top-ups
+ * - **External Links**: Quick access to testnet faucets and token management
+ * - **Status Updates**: Real-time feedback during payment processing
+ *
+ * @composition
+ * Built using smaller, reusable components:
+ * - `StorageOverview`: High-level storage statistics and summary
+ * - `StorageCard`: Individual storage type display (CDN, Standard)
+ * - `WalletBalances`: Token balance display and management
+ * - `PaymentActions`: Payment processing interface
+ *
+ * @state
+ * - Automatically manages connection state and data fetching
+ * - Handles loading states gracefully across all sub-components
+ * - Provides consistent error handling and user feedback
  *
  * @example
  * ```tsx
- * // Use the full component
- * <StorageManager />
+ * // Full component usage
+ * function App() {
+ *   return (
+ *     <WagmiProvider>
+ *       <StorageManager />
+ *     </WagmiProvider>
+ *   );
+ * }
  *
- * // Or compose your own with individual components
- * <StorageOverview totalStorageGB={10} totalDatasets={3} daysRemaining={30} />
- * <StorageCard title="CDN Storage" icon="⚡" usageGB={5} variant="cdn" />
+ * // Composable usage with individual components
+ * function CustomStorageDashboard() {
+ *   const { data: balances } = useBalances();
+ *
+ *   return (
+ *     <div>
+ *       <StorageOverview
+ *         totalStorageGB={balances?.currentStorageGB || 0}
+ *         totalDatasets={balances?.totalDatasets || 0}
+ *         daysRemaining={balances?.persistenceDaysLeft || 0}
+ *       />
+ *       <StorageCard
+ *         title="CDN Storage"
+ *         icon="⚡"
+ *         usageGB={balances?.cdnUsedGiB || 0}
+ *         variant="cdn"
+ *       />
+ *     </div>
+ *   );
+ * }
  * ```
+ *
+ * @dependencies
+ * - `useAccount`: Wallet connection state
+ * - `useBalances`: Storage and wallet balance data
+ * - `usePayment`: Payment processing functionality
+ * - `useWatchAsset`: Token addition to wallet
+ *
+ * @accessibility
+ * - Responsive design for mobile and desktop
+ * - Proper ARIA labels and semantic HTML
+ * - Keyboard navigation support
+ * - High contrast color scheme compatibility
  */
 export const StorageManager = () => {
   const { isConnected } = useAccount();

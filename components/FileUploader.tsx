@@ -3,6 +3,59 @@ import { useState, useCallback } from "react";
 import { useAccount } from "wagmi";
 import { useFileUpload } from "@/hooks/useFileUpload";
 
+/**
+ * File Upload Component for Filecoin Storage
+ *
+ * @description
+ * A comprehensive file upload interface that handles the complete workflow of uploading
+ * files to Filecoin storage. Features drag-and-drop functionality, progress tracking,
+ * automatic payment handling, and detailed upload status reporting.
+ *
+ * @functionality
+ * - **Drag & Drop Interface**: Modern file selection with drag-and-drop support
+ * - **Progress Tracking**: Real-time upload progress with visual progress bar
+ * - **Automatic Payments**: Seamlessly handles storage payments when needed
+ * - **Status Updates**: Detailed status messages throughout the upload process
+ * - **Upload Results**: Displays file information, piece CID, and transaction hash
+ * - **Error Handling**: User-friendly error messages and retry functionality
+ * - **State Management**: Clean reset functionality for new uploads
+ *
+ * @workflow Upload Process:
+ * 1. **File Selection**: User selects file via drag-drop or file picker
+ * 2. **Validation**: Check file and wallet connection
+ * 3. **Cost Check**: Verify sufficient USDFC for storage costs
+ * 4. **Payment**: Automatically handle payment if needed
+ * 5. **Dataset Setup**: Create or resolve storage dataset
+ * 6. **Upload**: Transfer file data to storage provider
+ * 7. **Confirmation**: Wait for blockchain confirmation
+ * 8. **Results**: Display upload details and piece information
+ *
+ * @example
+ * ```tsx
+ * function App() {
+ *   return (
+ *     <WagmiProvider>
+ *       <div className="upload-container">
+ *         <h1>Upload to Filecoin</h1>
+ *         <FileUploader />
+ *       </div>
+ *     </WagmiProvider>
+ *   );
+ * }
+ * ```
+ *
+ * @accessibility
+ * - Keyboard navigation support for file selection
+ * - Screen reader compatible status updates
+ * - Focus management during upload process
+ * - High contrast color support for progress indicators
+ *
+ * @security
+ * - Client-side file validation
+ * - Secure wallet integration
+ * - No file data stored in browser memory unnecessarily
+ * - Transaction confirmation required before completion
+ */
 export const FileUploader = () => {
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);

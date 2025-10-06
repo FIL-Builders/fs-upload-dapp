@@ -1,4 +1,4 @@
-import { DecimalUnitConverter } from "@/utils/decimalUtils";
+import { bytesToKiB, bytesToMiB, bytesToGiB } from "@/utils/storageCalculations";
 import { PieceSizeInfo } from "@/types";
 
 /**
@@ -10,6 +10,15 @@ import { PieceSizeInfo } from "@/types";
 // 0x01 (CIDv1), 0x55 (Raw), 0x91 0x20 (fr32-sha2-256-trunc254-padded-binary-tree)
 const COMMP_V2_PREFIX = new Uint8Array([0x01, 0x55, 0x91, 0x20]);
 
+/**
+ * Parsed CommP v2 CID structure containing extracted components
+ *
+ * @interface ParsedCommP
+ * @property {bigint} padding - Padding value used in piece size calculation
+ * @property {number} height - Tree height determining piece capacity
+ * @property {number} digestOffset - Byte offset where digest data begins
+ * @property {Uint8Array} digest - 32-byte cryptographic digest of the piece
+ */
 export interface ParsedCommP {
   padding: bigint;
   height: number;
@@ -17,6 +26,24 @@ export interface ParsedCommP {
   digest: Uint8Array; // 32 bytes
 }
 
+/**
+ * Converts a hexadecimal string to a Uint8Array
+ *
+ * @description
+ * Utility function for converting hex strings (with or without '0x' prefix)
+ * to binary data. Used for processing CID strings and blockchain data.
+ *
+ * @param {string} hex - Hexadecimal string to convert
+ * @returns {Uint8Array} Binary representation of the hex string
+ *
+ * @throws {Error} When hex string has invalid (odd) length
+ *
+ * @example
+ * ```typescript
+ * const bytes = hexToBytes("0x1234abcd");
+ * // Returns: Uint8Array([0x12, 0x34, 0xab, 0xcd])
+ * ```
+ */
 export function hexToBytes(hex: string): Uint8Array {
   const normalized = hex.startsWith("0x") ? hex.slice(2) : hex;
   if (normalized.length % 2 !== 0) {
@@ -29,6 +56,22 @@ export function hexToBytes(hex: string): Uint8Array {
   return out;
 }
 
+/**
+ * Converts a Uint8Array to a hexadecimal string with '0x' prefix
+ *
+ * @description
+ * Utility function for converting binary data to hex strings for display
+ * and storage. Commonly used for showing digests and CID components.
+ *
+ * @param {Uint8Array} bytes - Binary data to convert
+ * @returns {string} Hexadecimal string with '0x' prefix
+ *
+ * @example
+ * ```typescript
+ * const hex = bytesToHex(new Uint8Array([0x12, 0x34, 0xab, 0xcd]));
+ * // Returns: "0x1234abcd"
+ * ```
+ */
 export function bytesToHex(bytes: Uint8Array): string {
   let hex = "0x";
   for (let i = 0; i < bytes.length; i++) {
@@ -156,9 +199,9 @@ export function getPieceInfoFromCidBytes(
   const excessive = isPaddingExcessive(parsed.padding, parsed.height);
 
   // Convert to human-readable numbers where appropriate
-  const sizeKiB = DecimalUnitConverter.bytesToKiB(sizeBytes).toNumber();
-  const sizeMiB = DecimalUnitConverter.bytesToMiB(sizeBytes).toNumber();
-  const sizeGiB = DecimalUnitConverter.bytesToGiB(sizeBytes).toNumber();
+  const sizeKiB = bytesToKiB(sizeBytes).toNumber();
+  const sizeMiB = bytesToMiB(sizeBytes).toNumber();
+  const sizeGiB = bytesToGiB(sizeBytes).toNumber();
 
   return {
     padding: parsed.padding,
