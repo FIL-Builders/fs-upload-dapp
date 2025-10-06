@@ -8,12 +8,12 @@ import {
 } from "@filoz/synapse-sdk";
 import { useAccount } from "wagmi";
 import { DataSet } from "@/types";
-import { getDatasetsSizeInfo } from "@/utils/calculateStorageMetrics";
+import { getDatasetsSizeInfo } from "@/utils/warmStorageUtils";
 import { getPieceInfoFromCidBytes } from "@/utils/cids";
 import { PieceSizeInfo } from "@/types";
 import { useEthersSigner } from "./useEthers";
 import { Synapse } from "@filoz/synapse-sdk";
-import { config } from "@/config";
+import { useConfig } from "@/providers/ConfigProvider";
 import { getQueryKey } from "@/utils/constants";
 
 /**
@@ -40,7 +40,9 @@ import { getQueryKey } from "@/utils/constants";
 export const useDatasets = () => {
   const { address } = useAccount();
   const signer = useEthersSigner();
+  const { config } = useConfig();
   return useQuery({
+    refetchInterval: 4000,
     enabled: !!address && signer?.address === address,
     queryKey: getQueryKey("datasets", address),
     queryFn: async () => {
@@ -51,36 +53,39 @@ export const useDatasets = () => {
         withCDN: config.withCDN,
       });
 
-      // STEP 3: Fetch providers and datasets in parallel for efficiency
+      // STEP 2: Fetch providers and datasets in parallel for efficiency
       const datasets = await synapse.storage.findDataSets();
 
-      // STEP 5: Fetch provider information with error handling
+      // STEP 3: Fetch provider information with error handling
       const datasetsSizeInfo = await getDatasetsSizeInfo(datasets, synapse);
 
       const providers = await Promise.all(
         datasets.map((dataset) => synapse.getProviderInfo(dataset.providerId))
       );
 
-      // STEP 6: Create provider ID to service URL mapping
+      // STEP 4: Create provider ID to service URL mapping
       const providerIdToServiceUrlMap = providers.reduce((acc, provider) => {
         acc[provider.id] = provider.products.PDP?.data.serviceURL || "";
         return acc;
       }, {} as Record<string, string>);
 
-      // STEP 7: Fetch detailed dataset information with PDP data
+      // STEP 5: Fetch detailed dataset information with PDP data
       const datasetDataResults = await Promise.all(
         datasets.map(async (dataset: EnhancedDataSetInfo) => {
           const serviceURL = providerIdToServiceUrlMap[dataset.providerId];
           const provider = providers.find((p) => p.id === dataset.providerId);
 
           try {
-            // Connect to PDP server to get piece information
+            // STEP 6: Connect to PDP server to get piece information
             const pdpServer = new PDPServer(null, serviceURL || "");
-            const data = await pdpServer.getDataSet(
-              dataset.pdpVerifierDataSetId
-            );
-            // CID PARSING METHOD: For exact piece sizes matching smart contract logic
-            // Process pieces and calculate exact sizes from CID bytes
+            const data = await pdpServer
+              .getDataSet(dataset.pdpVerifierDataSetId)
+              .then((data) => {
+                data.pieces.reverse();
+                return data;
+              });
+
+            // STEP 7: Create pieces map
             const pieces = data.pieces.reduce(
               (acc, piece: DataSetPieceData) => {
                 acc[piece.pieceCid.toV1().toString()] =

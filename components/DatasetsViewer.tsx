@@ -136,12 +136,6 @@ export const DatasetsViewer = () => {
                   </div>
 
                   <div className="mt-4">
-                    <h5
-                      className="text-sm font-medium mb-2"
-                      style={{ color: "var(--foreground)" }}
-                    >
-                      Piece Details
-                    </h5>
                     <div
                       className="rounded-lg border p-4"
                       style={{
@@ -149,45 +143,14 @@ export const DatasetsViewer = () => {
                         borderColor: "var(--border)",
                       }}
                     >
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div>
-                          <p
-                            className="text-sm"
-                            style={{ color: "var(--muted-foreground)" }}
-                          >
-                            Current Piece Count
-                          </p>
-                          <p
-                            className="font-medium"
-                            style={{ color: "var(--foreground)" }}
-                          >
-                            {dataset.currentPieceCount}
-                          </p>
-                        </div>
-                        <div>
-                          <p
-                            className="text-sm"
-                            style={{ color: "var(--muted-foreground)" }}
-                          >
-                            Next Piece ID
-                          </p>
-                          <p
-                            className="font-medium"
-                            style={{ color: "var(--foreground)" }}
-                          >
-                            {dataset.nextPieceId}
-                          </p>
-                        </div>
-                      </div>
-
                       {dataset.data?.pieces && (
-                        <div className="mt-4">
+                        <div>
                           <div className="flex justify-between items-center mb-2">
                             <h6
                               className="text-sm font-medium"
                               style={{ color: "var(--foreground)" }}
                             >
-                              Available Pieces
+                              {`Stored Files: #${dataset.currentPieceCount}`}
                             </h6>
                             <p
                               className="text-sm"

@@ -1,6 +1,6 @@
 "use client";
 
-import { DecimalFormatter } from "@/utils/decimalUtils";
+import { formatPercentage } from "@/utils/storageCalculations";
 
 interface ProgressBarProps {
   current: number;
@@ -40,7 +40,7 @@ export const ProgressBar = ({
     current > 0 && percentage < 1 ? Math.max(percentage, 1) : percentage;
 
   // Smart formatting for percentage display
-  const formattedPercentage = DecimalFormatter.formatPercentage(
+  const formattedPercentage = formatPercentage(
     percentage / 100,
     { maxDecimals: 2, showZero: true }
   );

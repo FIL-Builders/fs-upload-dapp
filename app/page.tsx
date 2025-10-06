@@ -217,50 +217,54 @@ export default function Home() {
               </motion.div>
 
               <AnimatePresence mode="wait">
-                {activeTab === "manage-storage" ? (
-                  <motion.div
-                    key="deposit"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 200,
-                      damping: 20,
-                    }}
-                  >
-                    <StorageManager />
-                  </motion.div>
-                ) : activeTab === "upload" ? (
-                  <motion.div
-                    key="upload"
-                    // top to bottom
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: +20 }}
-                    transition={{
-                      type: "smooth",
-                    }}
-                  >
-                    <FileUploader />
-                  </motion.div>
-                ) : (
-                  activeTab === "datasets" && (
-                    <motion.div
-                      key="datasets"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 200,
-                        damping: 20,
-                      }}
-                    >
-                      <DatasetsViewer />
-                    </motion.div>
-                  )
-                )}
+                <motion.div
+                  key="deposit"
+                  className={`${
+                    activeTab === "manage-storage" ? "opacity-100" : "hidden"
+                  }`}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 200,
+                    damping: 20,
+                  }}
+                >
+                  <StorageManager />
+                </motion.div>
+                <motion.div
+                  key="upload"
+                  className={`${
+                    activeTab === "upload" ? "opacity-100" : "hidden"
+                  }`}
+                  // top to bottom
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: +20 }}
+                  transition={{
+                    type: "smooth",
+                  }}
+                >
+                  <FileUploader />
+                </motion.div>
+
+                <motion.div
+                  key="datasets"
+                  className={`${
+                    activeTab === "datasets" ? "opacity-100" : "hidden"
+                  }`}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 200,
+                    damping: 20,
+                  }}
+                >
+                  <DatasetsViewer />
+                </motion.div>
               </AnimatePresence>
             </motion.div>
           )}
