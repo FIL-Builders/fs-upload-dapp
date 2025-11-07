@@ -163,33 +163,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             storage. By default you always need to pay for 30 days in advance.
           </p>
         </div>
-
-        {/* CDN: Content Delivery Network for faster file retrieval (higher cost) */}
-        <div className="space-y-2">
-          <label className="flex items-center space-x-3">
-            <input
-              type="checkbox"
-              checked={localConfig.withCDN}
-              onChange={(e) => handleInputChange("withCDN", e.target.checked)}
-              className="w-4 h-4 rounded transition-colors"
-              style={{
-                accentColor: "var(--primary)",
-              }}
-            />
-            <span
-              className="text-sm font-medium"
-              style={{ color: "var(--foreground)" }}
-            >
-              Use CDN for faster retrieval
-            </span>
-          </label>
-          <p
-            className="text-xs ml-7"
-            style={{ color: "var(--muted-foreground)" }}
-          >
-            Whether to use CDN for the storage for faster retrieval
-          </p>
-        </div>
       </div>
     </Modal>
   );

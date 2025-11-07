@@ -54,11 +54,9 @@ export const calculateStorageMetrics = async (
 
   const daysLeftAtCurrentRate = currentDailyRate === 0n ? Infinity : Number(availableFunds) / Number(currentDailyRate);
 
-  const daysLeftAtMaxBurnRate = Number(availableFunds) / Number(storageCosts.perDay);
+  const daysLeft = Number(availableFunds) / Number(storageCosts.perDay);
 
-  const daysLeft = daysLeftAtMaxBurnRate >= daysLeftAtCurrentRate ? daysLeftAtCurrentRate : daysLeftAtMaxBurnRate;
-
-  const amountNeeded = storageCosts.perDay * BigInt(Math.ceil(config.persistencePeriod - daysLeft));
+  const amountNeeded = storageCosts.perDay * BigInt(config.persistencePeriod);
 
   const totalDepositNeeded =
     daysLeft >= config.minDaysThreshold
