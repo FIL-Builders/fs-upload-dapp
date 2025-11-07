@@ -1,10 +1,10 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useConfetti } from "@/hooks/useConfetti";
-import { TOKENS, TIME_CONSTANTS, Synapse } from "@filoz/synapse-sdk";
-import { useAccount } from "wagmi";
+import { useAccount, useConfig as useWagmiConfig, useWalletClient } from "wagmi";
+import * as Payments from "@filoz/synapse-core/pay";
+import { waitForTransactionReceipt } from "wagmi/actions";
 import { useConfig } from "@/providers/ConfigProvider";
-import { useEthersSigner } from "./useEthers";
 
 /**
  * Custom hook for handling storage payment transactions using EIP-2612 permit signatures
@@ -22,7 +22,7 @@ import { useEthersSigner } from "./useEthers";
  * - **Persistence Period**: How many days the lockup amount should last
  *
  * @functionality
- * - Validates sufficient USDFC balance before processing
+ * - Validates sufficient tUSDFC balance before processing
  * - Creates EIP-2612 permit signature for gasless token approval
  * - Calls `depositWithPermitAndApproveOperator` in a single transaction
  * - Sets up rate and lockup allowances for WarmStorage operator
@@ -68,58 +68,33 @@ export const usePayment = (ignoreConfetti = false) => {
   const [status, setStatus] = useState<string>("");
   const { triggerConfetti } = useConfetti();
   const { address, chainId } = useAccount();
-  const signer = useEthersSigner();
+  const wagmiConfig = useWagmiConfig();
+  const queryClient = useQueryClient();
   const { config } = useConfig();
+  const { data: client } = useWalletClient();
   const mutation = useMutation({
     mutationKey: ["payment", address],
     mutationFn: async ({
-      lockupAllowance,
-      epochRateAllowance,
-      depositAmount,
+      amount,
     }: {
-      /** Total USDFC that can be locked for long-term storage commitments */
-      lockupAllowance: bigint;
-      /** Per-epoch spending limit for ongoing storage costs */
-      epochRateAllowance: bigint;
-      /** USDFC tokens to deposit into payments contract immediately */
-      depositAmount: bigint;
+      amount: bigint;
     }) => {
       // === VALIDATION PHASE ===
       // Ensure all required dependencies are available before proceeding
       if (!address) throw new Error("Address not found");
-      if (!signer) throw new Error("Signer not found");
       if (!chainId) throw new Error("Chain id not found");
-
-      // === SYNAPSE INITIALIZATION ===
-      // Create Synapse instance with user's configuration
-      const synapse = await Synapse.create({
-        signer,
-        withCDN: config.withCDN,
-      });
-
-      // Get contract addresses from Synapse for the current network
-      const warmStorageAddress = synapse.getWarmStorageAddress();
-
-      // === BALANCE VALIDATION ===
-      // Check if user has sufficient USDFC tokens for the deposit
-      const amount = depositAmount;
-      const balance = await synapse.payments.walletBalance(TOKENS.USDFC);
-
-      if (balance < amount) {
-        throw new Error("Insufficient USDFC balance");
-      }
-
+      if (!client) throw new Error("Public client not found");
       setStatus("💰 Setting up your storage configuration...");
 
-      const tx = await synapse.payments.depositWithPermitAndApproveOperator(
+      const tx = await Payments.depositAndApprove(client, {
         amount,
-        warmStorageAddress,
-        epochRateAllowance,
-        lockupAllowance,
-        TIME_CONSTANTS.EPOCHS_PER_DAY * BigInt(config.persistencePeriod)
-      );
+      });
 
-      await tx.wait(1);
+      setStatus(`💰 Payment transaction submitted: ${tx}`);
+
+      await waitForTransactionReceipt(wagmiConfig, {
+        hash: tx,
+      });
 
       setStatus("💰 You successfully configured your storage");
       return;
@@ -129,6 +104,9 @@ export const usePayment = (ignoreConfetti = false) => {
       if (!ignoreConfetti) {
         triggerConfetti();
       }
+      queryClient.invalidateQueries({
+        queryKey: ["balances", address, config],
+      });
     },
     onError: (error) => {
       console.error("Payment failed:", error);

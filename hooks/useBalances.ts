@@ -1,12 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { Synapse, TOKENS } from "@filoz/synapse-sdk";
 import { useAccount } from "wagmi";
 import { calculateStorageMetrics } from "@/utils/calculateStorageMetrics";
 import { formatUnits } from "viem";
 import { defaultBalances, UseBalancesResponse } from "@/types";
-import { useEthersSigner } from "./useEthers";
 import { useConfig } from "@/providers/ConfigProvider";
-import { getQueryKey } from "@/utils/constants";
+import * as ERC20 from "@filoz/synapse-core/erc20";
+import * as Payments from "@filoz/synapse-core/pay";
+import { getBalance } from "viem/actions";
+import * as WarmStorage from "@filoz/synapse-core/warm-storage";
+import { usePublicClient } from "wagmi";
 
 /**
  * Custom hook for fetching and managing user wallet balances and storage metrics
@@ -26,7 +28,6 @@ import { getQueryKey } from "@/utils/constants";
  *
  * @dependencies
  * - `useAccount`: Wallet connection state and address
- * - `useEthersSigner`: Ethers.js signer for blockchain interactions
  * - `useConfig`: Application configuration (CDN settings, etc.)
  * - `Synapse`: Filecoin storage SDK for balance queries
  * - `calculateStorageMetrics`: Utility for storage calculations
@@ -47,63 +48,51 @@ import { getQueryKey } from "@/utils/constants";
  *   return (
  *     <div>
  *       <p>FIL Balance: {balances.filBalanceFormatted}</p>
- *       <p>USDFC Balance: {balances.usdfcBalanceFormatted}</p>
- *       <p>Storage Days Remaining: {balances.persistenceDaysLeft}</p>
+ *       <p>tUSDFC Balance: {balances.usdfcBalanceFormatted}</p>
+ *       <p>Storage Days Remaining: {balances.daysLeft}</p>
  *     </div>
  *   );
  * }
  * ```
  *
- * @throws {Error} When signer is not available
  * @throws {Error} When wallet address is not found
  * @throws {Error} When storage metric calculations fail
  */
+
 export const useBalances = () => {
   const { address } = useAccount();
-  const signer = useEthersSigner();
+  // const connectorClient = useConnectorClient({ connector });
+  const client = usePublicClient();
   const { config } = useConfig();
-
   const query = useQuery({
-    // Refresh every 4 seconds to keep balances current during active usage
-    refetchInterval: 4000,
-
-    // Only run query when wallet is connected and signer matches current address
-    // This prevents unnecessary API calls and ensures data consistency
-    enabled: !!address && signer?.address === address,
-
-    // Include config in query key to invalidate cache when settings change
-    queryKey: [...getQueryKey("balances", address), config],
-
+    enabled: !!address,
+    queryKey: ["balances", address, config],
     queryFn: async (): Promise<UseBalancesResponse> => {
-      // Early validation to provide clear error messages
-      if (!signer) throw new Error("Signer not found");
       if (!address) throw new Error("Address not found");
+      if (!client) throw new Error("Public client not found");
 
-      // Initialize Synapse SDK with current configuration
-      const synapse = await Synapse.create({
-        signer,
-        withCDN: config.withCDN,
-      });
-
-      // Fetch all balance types in parallel for optimal performance
-      // - filRaw: Native FIL tokens in wallet
-      // - usdfcRaw: USDFC stable coins in wallet
-      // - paymentsRaw: USDFC allocated for storage payments
-      const [filRaw, usdfcRaw, paymentsRaw] = await Promise.all([
-        synapse.payments.walletBalance(), // Default FIL balance
-        synapse.payments.walletBalance(TOKENS.USDFC), // USDFC wallet balance
-        synapse.payments.balance(TOKENS.USDFC), // USDFC payment balance (allocated for storage)
+      const [filRaw, { value: usdfcRaw, decimals: usdfcDecimals }, { availableFunds: paymentsRaw }, prices, operatorApprovals] = await Promise.all([
+        getBalance(client, {
+          address,
+        }),
+        ERC20.balance(client, {
+          address,
+        }),
+        Payments.accountInfo(client, {
+          address,
+        }),
+        WarmStorage.servicePrice(client),
+        Payments.operatorApprovals(client, {
+          address,
+        }),
       ]);
 
-      // Get USDFC token decimals for proper formatting
-      const usdfcDecimals = synapse.payments.decimals(TOKENS.USDFC);
-
-      // Calculate comprehensive storage metrics including:
-      // - Current storage usage and capacity
-      // - Persistence days remaining
-      // - Rate and lockup allowances
-      // - Sufficiency checks for new uploads
-      const storageMetrics = await calculateStorageMetrics(synapse, config);
+      const storageMetrics = await calculateStorageMetrics({
+        prices,
+        operatorApprovals,
+        availableFunds: paymentsRaw,
+        config,
+      });
 
       return {
         filBalance: filRaw,
@@ -112,6 +101,9 @@ export const useBalances = () => {
         filBalanceFormatted: formatBalance(filRaw, 18),
         usdfcBalanceFormatted: formatBalance(usdfcRaw, usdfcDecimals),
         warmStorageBalanceFormatted: formatBalance(paymentsRaw, usdfcDecimals),
+        availableToFreeUpFormatted: formatBalance(storageMetrics.availableToFreeUp, usdfcDecimals),
+        monthlyRateFormatted: formatBalance(storageMetrics.currentMonthlyRate, usdfcDecimals),
+        maxMonthlyRateFormatted: formatBalance(storageMetrics.maxMonthlyRate, usdfcDecimals),
         ...storageMetrics,
       };
     },

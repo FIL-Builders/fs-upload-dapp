@@ -1,7 +1,5 @@
 "use client";
 
-import { formatPercentage } from "@/utils/storageCalculations";
-
 interface ProgressBarProps {
   current: number;
   max: number;
@@ -40,10 +38,7 @@ export const ProgressBar = ({
     current > 0 && percentage < 1 ? Math.max(percentage, 1) : percentage;
 
   // Smart formatting for percentage display
-  const formattedPercentage = formatPercentage(
-    percentage / 100,
-    { maxDecimals: 2, showZero: true }
-  );
+  const formattedPercentage = `${Number((percentage / 100).toFixed(2))}%`;
 
   const getVariantStyle = (variant: string) => {
     switch (variant) {
@@ -82,7 +77,7 @@ export const ProgressBar = ({
         className="flex justify-between text-xs"
         style={{ color: "var(--muted-foreground)" }}
       >
-        <span>{current < 0.01 ? '< 0.01' : current.toFixed(2)}</span>
+        <span>{current < 0.01 ? "< 0.01" : current.toFixed(2)}</span>
         <span>{max.toFixed(2)}</span>
       </div>
     </div>

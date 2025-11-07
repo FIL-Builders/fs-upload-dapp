@@ -1,13 +1,15 @@
 "use client";
 
 import { useAccount, useWatchAsset } from "wagmi";
-import { useBalances } from "@/hooks/useBalances";
 import { usePayment } from "@/hooks/usePayment";
+import { useWithdraw } from "@/hooks/useWithdraw";
 import { StorageCard } from "./StorageCard";
 import { StorageOverview } from "./StorageOverview";
 import { WalletBalances } from "./WalletBalances";
 import { PaymentActions } from "./PaymentActions";
-
+import { UseBalancesResponse } from "@/types";
+import { DataSetWithPieces } from "@filoz/synapse-react";
+import { getDatasetsSizes } from "@/utils/storageCalculations";
 /**
  * Comprehensive Storage Manager Component for Filecoin Storage Operations
  *
@@ -57,7 +59,7 @@ import { PaymentActions } from "./PaymentActions";
  *       <StorageOverview
  *         totalStorageGB={balances?.currentStorageGB || 0}
  *         totalDatasets={balances?.totalDatasets || 0}
- *         daysRemaining={balances?.persistenceDaysLeft || 0}
+ *         daysRemaining={balances?.daysLeft || 0}
  *       />
  *       <StorageCard
  *         title="CDN Storage"
@@ -82,15 +84,16 @@ import { PaymentActions } from "./PaymentActions";
  * - Keyboard navigation support
  * - High contrast color scheme compatibility
  */
-export const StorageManager = () => {
+export const StorageManager = ({
+  balances,
+  datasetsData,
+  isBalanceLoading,
+}: {
+  balances: UseBalancesResponse;
+  datasetsData: DataSetWithPieces[];
+  isBalanceLoading: boolean;
+}) => {
   const { isConnected } = useAccount();
-
-  // Simplified data fetching
-  const {
-    data: balances,
-    isLoading: isBalanceLoading,
-    refetch: refetchBalances,
-  } = useBalances();
 
   const addAsset = useWatchAsset();
 
@@ -99,20 +102,20 @@ export const StorageManager = () => {
       type: "ERC20",
       options: {
         address: "0xb3042734b608a1B16e9e86B374A3f3e389B4cDf0",
-        symbol: "USDFC",
+        symbol: "tUSDFC",
         decimals: 18,
       },
     });
   };
 
+  const { mutation: withdrawMutation, status: withdrawStatus } = useWithdraw();
+
   const { mutation: paymentMutation, status } = usePayment();
-  const { mutateAsync: handlePayment, isPending: isProcessingPayment } =
-    paymentMutation;
 
   if (!isConnected) return null;
 
   const isLoading = isBalanceLoading;
-
+  const datasetsSizes = getDatasetsSizes(datasetsData);
   return (
     <div
       className="p-6 rounded-lg border shadow-sm"
@@ -152,7 +155,7 @@ export const StorageManager = () => {
               className="px-4 py-2 text-sm h-9 flex items-center justify-center rounded-lg border-2 border-black transition-all bg-black text-white hover:bg-white hover:text-black"
               onClick={handleAddAsset}
             >
-              Add USDFC
+              Add tUSDFC
             </button>
           </div>
         </div>
@@ -170,13 +173,13 @@ export const StorageManager = () => {
 
           {/* Quick Overview - Composable component */}
           <StorageOverview
-            totalStorageGB={balances?.currentStorageGB || 0}
-            storageCapacityGB={balances?.currentRateAllowanceGB || 0}
-            totalDatasets={balances?.totalDatasets || 0}
-            daysRemainingAtCurrentRate={
-              balances?.persistenceDaysLeftAtCurrentRate || 0
-            }
-            daysRemaining={balances?.persistenceDaysLeft || 0}
+            totalStorageGB={datasetsSizes.sizeInGiB}
+            storageCapacityGB={balances.totalConfiguredCapacity}
+            totalDatasets={datasetsData.length}
+            daysRemainingAtCurrentRate={balances.daysLeftAtCurrentRate}
+            daysRemaining={balances.daysLeft}
+            monthlyCost={balances.monthlyRateFormatted}
+            maxMonthlyRateFormatted={balances.maxMonthlyRateFormatted}
             isLoading={isLoading}
           />
 
@@ -185,7 +188,7 @@ export const StorageManager = () => {
               title="Fast Storage (CDN)"
               icon="⚡"
               tooltipText="Premium storage with worldwide fast access. Best for frequently accessed files."
-              usageGB={balances?.cdnUsedGiB || 0}
+              usageGB={datasetsSizes.cdnSizeInGiB}
               variant="cdn"
               isLoading={isLoading}
             />
@@ -194,7 +197,7 @@ export const StorageManager = () => {
               title="Standard Storage"
               icon="💾"
               tooltipText="Regular storage with standard access speed. Cost-effective for most files."
-              usageGB={balances?.nonCdnUsedGiB || 0}
+              usageGB={datasetsSizes.nonCdnSizeInGiB}
               variant="standard"
               isLoading={isLoading}
             />
@@ -215,9 +218,18 @@ export const StorageManager = () => {
           <PaymentActions
             balances={balances}
             isLoading={isBalanceLoading}
-            isProcessingPayment={isProcessingPayment}
-            onPayment={handlePayment}
-            onRefreshBalances={refetchBalances}
+            isProcessingPayment={paymentMutation.isPending}
+            onPayment={async () => {
+              await paymentMutation.mutateAsync({
+                amount: balances.depositNeeded,
+              });
+            }}
+            onWithdraw={async () => {
+              await withdrawMutation.mutateAsync({
+                amount: balances.availableToFreeUp,
+              });
+            }}
+            isProcessingWithdraw={withdrawMutation.isPending}
           />
         </div>
 

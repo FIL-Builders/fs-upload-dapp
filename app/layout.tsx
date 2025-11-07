@@ -2,15 +2,12 @@
 "use client";
 
 import "./globals.css";
-import { WagmiProvider } from "wagmi";
-import { filecoinCalibration } from "wagmi/chains";
-import { http, createConfig } from "@wagmi/core";
+import { WagmiProvider, serialize, deserialize } from "wagmi";
+import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import dynamic from "next/dynamic";
-const RainbowKitProvider = dynamic(
-  () => import("@rainbow-me/rainbowkit").then((m) => m.RainbowKitProvider),
-  { ssr: false }
-);
+import { persistQueryClient } from "@tanstack/react-query-persist-client";
+import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
+
 import "@rainbow-me/rainbowkit/styles.css";
 import * as React from "react";
 import { Navbar } from "@/components/ui/Navbar";
@@ -19,62 +16,34 @@ import { ConfettiProvider } from "@/providers/ConfettiProvider";
 import { ConfigProvider } from "@/providers/ConfigProvider";
 import Footer from "@/components/ui/Footer";
 import { GeolocationProvider } from "@/providers/GeolocationProvider";
+import { config } from "@/services/wagmi";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      gcTime: 1000 * 60 * 60 * 24, // 24 hours
+      networkMode: "offlineFirst",
+      retry: false,
+    },
+  },
+});
+
+const localStoragePersister = createSyncStoragePersister({
+  storage: typeof window !== "undefined" ? window.localStorage : null,
+  key: "filecoin-onchain-cloud-dapp-cache",
+  serialize,
+  deserialize,
+});
+persistQueryClient({
+  queryClient: queryClient,
+  persister: localStoragePersister,
+});
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [wagmiConfig, setWagmiConfig] = React.useState<ReturnType<
-    typeof createConfig
-  > | null>(null);
-
-  React.useEffect(() => {
-    let mounted = true;
-    (async () => {
-      const [{ connectorsForWallets }, walletsModule] = await Promise.all([
-        import("@rainbow-me/rainbowkit"),
-        import("@rainbow-me/rainbowkit/wallets"),
-      ]);
-
-      const wagmiConnectors = connectorsForWallets(
-        [
-          {
-            groupName: "Supported Wallets",
-            wallets: [
-              walletsModule.metaMaskWallet,
-              walletsModule.walletConnectWallet,
-              walletsModule.ledgerWallet,
-              walletsModule.rainbowWallet,
-              walletsModule.safeWallet,
-              walletsModule.rabbyWallet,
-            ],
-          },
-        ],
-        {
-          appName: "filecoin-onchain-cloud-dapp",
-          projectId: "3a8170812b534d0ff9d794f19a901d64",
-        }
-      );
-
-      const cfg = createConfig({
-        ssr: false,
-        chains: [filecoinCalibration],
-        connectors: wagmiConnectors,
-        transports: {
-          [filecoinCalibration.id]: http(),
-        },
-      });
-
-      if (mounted) setWagmiConfig(cfg);
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
   return (
     <html lang="en">
       <head>
@@ -101,20 +70,15 @@ export default function RootLayout({
             <ThemeProvider>
               <ConfettiProvider>
                 <QueryClientProvider client={queryClient}>
-                  {wagmiConfig ? (
-                    <WagmiProvider config={wagmiConfig}>
-                      <RainbowKitProvider
-                        modalSize="compact"
-                        initialChain={filecoinCalibration.id}
-                      >
-                        <main className="flex flex-col min-h-screen">
-                          <Navbar />
-                          {children}
-                        </main>
-                        <Footer />
-                      </RainbowKitProvider>
-                    </WagmiProvider>
-                  ) : null}
+                  <WagmiProvider config={config}>
+                    <RainbowKitProvider modalSize="compact">
+                      <main className="flex flex-col min-h-screen">
+                        <Navbar />
+                        {children}
+                      </main>
+                      <Footer />
+                    </RainbowKitProvider>
+                  </WagmiProvider>
                 </QueryClientProvider>
               </ConfettiProvider>
             </ThemeProvider>

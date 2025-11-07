@@ -102,7 +102,7 @@ const {
   filBalance,
   usdfcBalance,
   filecoinWarmStorageServiceBalance,
-  persistenceDaysLeft,
+  daysLeft,
   isSufficient,
   rateNeeded,
   lockUpNeeded,

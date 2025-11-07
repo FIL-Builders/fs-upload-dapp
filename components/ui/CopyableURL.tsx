@@ -1,13 +1,15 @@
 import { useState } from "react";
+import { CopyIcon, CopyCheckIcon } from "lucide-react";
 
 export const CopyableURL = ({ url }: { url: string | undefined }) => {
-  const [showTooltip, setShowTooltip] = useState(false);
-
+  const [isCopied, setIsCopied] = useState(false);
   const handleCopy = () => {
     if (url) {
       navigator.clipboard.writeText(url);
-      setShowTooltip(true);
-      setTimeout(() => setShowTooltip(false), 1000);
+      setIsCopied(true);
+      setTimeout(() => {
+        setIsCopied(false);
+      }, 1000);
     }
   };
 
@@ -19,9 +21,13 @@ export const CopyableURL = ({ url }: { url: string | undefined }) => {
         onClick={handleCopy}
       >
         <div>{url}</div>
-        <div className="text-xs">📋</div>
+        {isCopied ? (
+          <CopyCheckIcon className="w-4 h-4" />
+        ) : (
+          <CopyIcon className="w-4 h-4" />
+        )}
       </div>
-      {showTooltip && (
+      {isCopied && (
         <div
           className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-2 py-1 text-xs rounded shadow-lg z-10 whitespace-nowrap"
           style={{
