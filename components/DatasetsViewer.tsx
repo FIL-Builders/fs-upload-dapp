@@ -199,7 +199,7 @@ export const DatasetsViewer = ({
                             </h6>
                           </div>
                           <div className="space-y-2">
-                            {dataset.pieces.map((piece) => (
+                            {dataset.pieces.reverse().map((piece) => (
                               <PieceDetails
                                 key={piece.id.toString()}
                                 dataset={dataset}
