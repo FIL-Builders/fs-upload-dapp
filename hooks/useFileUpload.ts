@@ -45,7 +45,7 @@ export const useFileUpload = () => {
         ...prev,
         txHash: hash,
       }));
-      setStatus(`🔗 File upload transaction submitted: ${hash}`);
+      setStatus(`🔗 File upload transaction submitted`);
       setProgress(70);
     },
   });

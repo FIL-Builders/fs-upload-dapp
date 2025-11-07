@@ -27,7 +27,7 @@ export const useWithdraw = (ignoreConfetti = false) => {
       await waitForTransactionReceipt(wagmiConfig, {
         hash: hash,
       });
-      setStatus(`💰 Withdrawal transaction submitted: ${hash}`);
+      setStatus(`💰 Withdrawal transaction submitted`);
       return
     },
     onSuccess: () => {

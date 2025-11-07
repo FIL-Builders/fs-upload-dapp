@@ -27,7 +27,7 @@ export const useCreateDataset = () => {
   const { mutation: paymentMutation } = usePayment(true);
   const { mutateAsync: createDataSet } = useCreateDataSet({
     onHash: (hash) => {
-      setStatus(`🔗 Dataset creation transaction submitted: ${hash}`);
+      setStatus(`🔗 Dataset creation transaction submitted`);
       setProgress(70);
     },
   });

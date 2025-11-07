@@ -90,7 +90,7 @@ export const usePayment = (ignoreConfetti = false) => {
         amount,
       });
 
-      setStatus(`💰 Payment transaction submitted: ${tx}`);
+      setStatus(`💰 Payment transaction submitted`);
 
       await waitForTransactionReceipt(wagmiConfig, {
         hash: tx,

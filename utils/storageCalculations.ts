@@ -97,14 +97,14 @@ export const getDatasetsSizes = (datasets: DataSetWithPieces[]): {
 
 const bytesSizeToMessage = (sizeInBytes: bigint): string => {
   if (sizeInBytes > SIZE_CONSTANTS.GiB) {
-    return `${bytesToGiB(sizeInBytes).toNumber()} GB`;
+    return `${bytesToGiB(sizeInBytes).toNumber().toFixed(4)} GB`;
   }
   if (sizeInBytes > SIZE_CONSTANTS.MiB) {
-    return `${bytesToMiB(sizeInBytes).toNumber()} MB`;
+    return `${bytesToMiB(sizeInBytes).toNumber().toFixed(4)} MB`;
   }
   if (sizeInBytes > SIZE_CONSTANTS.KiB) {
-    return `${bytesToKiB(sizeInBytes).toNumber()} KB`;
+    return `${bytesToKiB(sizeInBytes).toNumber().toFixed(4)} KB`;
   }
 
-  return `${sizeInBytes} B`;
+  return `${sizeInBytes.toString()} B`;
 };

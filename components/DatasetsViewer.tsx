@@ -76,7 +76,7 @@ export const DatasetsViewer = ({
         </div>
         <button
           onClick={() => setIsCreateModalOpen(true)}
-          className="px-4 py-1 rounded-lg transition-colors touch-manipulation "
+          className="sm:px-4 sm:py-1 px-2 py-1 text-sm rounded-lg transition-colors touch-manipulation "
           style={{
             backgroundColor: "var(--primary)",
             color: "var(--primary-foreground)",
@@ -105,13 +105,13 @@ export const DatasetsViewer = ({
               dataset && (
                 <div
                   key={dataset.dataSetId.toString()}
-                  className="rounded-lg p-4 border"
+                  className="rounded-lg p-4 border flex flex-col justify-between w-full"
                   style={{
                     backgroundColor: "var(--muted)",
                     borderColor: "var(--border)",
                   }}
                 >
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="flex sm:flex-row flex-col justify-between">
                     <div>
                       <h4
                         className="text-lg font-medium"
@@ -156,7 +156,7 @@ export const DatasetsViewer = ({
                         PDP URL: <CopyableURL url={dataset.pdp.serviceURL} />
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div>
                       <p
                         className="text-sm"
                         style={{ color: "var(--muted-foreground)" }}
@@ -189,8 +189,8 @@ export const DatasetsViewer = ({
                       }}
                     >
                       {dataset.pieces && (
-                        <div>
-                          <div className="flex justify-between items-center mb-2">
+                        <div className="w-full">
+                          <div className="sm:flex flex-col sm:justify-between items-start mb-2 w-full">
                             <h6
                               className="text-sm font-medium"
                               style={{ color: "var(--foreground)" }}
@@ -258,7 +258,7 @@ const PieceDetails = ({
   return (
     <div
       key={piece.id.toString()}
-      className="flex items-center justify-between p-2 rounded border"
+      className="sm:flex flex-col justify-between p-2 rounded border"
       style={{
         backgroundColor: "var(--muted)",
         borderColor: "var(--border)",
@@ -284,62 +284,64 @@ const PieceDetails = ({
           {`File size: ${Number(pieceSizeMiB.toFixed(4))} MB`}
         </p>
       </div>
-      <button
-        onClick={() => downloadMutation.mutate()}
-        disabled={downloadMutation.isPending}
-        className="ml-4 p-2 text-sm rounded-lg border-2 cursor-pointer transition-all disabled:cursor-not-allowed"
-        style={{
-          borderColor: downloadMutation.isPending
-            ? "var(--muted)"
-            : "var(--primary)",
-          backgroundColor: downloadMutation.isPending
-            ? "var(--muted)"
-            : "var(--primary)",
-          color: downloadMutation.isPending
-            ? "var(--muted-foreground)"
-            : "var(--primary-foreground)",
-        }}
-        onMouseEnter={(e) => {
-          if (!downloadMutation.isPending) {
-            e.currentTarget.style.backgroundColor = "var(--background)";
-            e.currentTarget.style.color = "var(--primary)";
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!downloadMutation.isPending) {
-            e.currentTarget.style.backgroundColor = "var(--primary)";
-            e.currentTarget.style.color = "var(--primary-foreground)";
-          }
-        }}
-      >
-        {downloadMutation.isPending ? (
-          <Loader2Icon className="w-4 h-4 animate-spin" />
-        ) : (
-          <DownloadIcon className="w-4 h-4" />
-        )}
-      </button>
-      <button
-        onClick={() => window.open(piece.url, "_blank")}
-        className="ml-4 p-2 text-sm rounded-lg border-2 cursor-pointer transition-all disabled:cursor-not-allowed"
-        style={{
-          borderColor: "var(--primary)",
-          backgroundColor: "var(--primary)",
-          color: "var(--primary-foreground)",
-        }}
-      >
-        <EyeIcon className="w-4 h-4" />
-      </button>
-      <button
-        onClick={() => deletePiece({ dataSet: dataset, pieceId: piece.id })}
-        className="ml-4 p-2 text-sm rounded-lg border-2 border-red-600 text-red-600 hover:text-white hover:bg-red-600 cursor-pointer transition-all disabled:cursor-not-allowed"
-        disabled={isDeletingPiece}
-      >
-        {isDeletingPiece ? (
-          <Loader2Icon className="w-4 h-4 animate-spin" />
-        ) : (
-          <TrashIcon className="w-4 h-4" />
-        )}
-      </button>
+      <div className="flex flex-row justify-end gap-2 p-2">
+        <button
+          onClick={() => downloadMutation.mutate()}
+          disabled={downloadMutation.isPending}
+          className="sm:ml-4 sm:p-2 p-1 text-sm rounded-lg border-2 cursor-pointer transition-all disabled:cursor-not-allowed"
+          style={{
+            borderColor: downloadMutation.isPending
+              ? "var(--muted)"
+              : "var(--primary)",
+            backgroundColor: downloadMutation.isPending
+              ? "var(--muted)"
+              : "var(--primary)",
+            color: downloadMutation.isPending
+              ? "var(--muted-foreground)"
+              : "var(--primary-foreground)",
+          }}
+          onMouseEnter={(e) => {
+            if (!downloadMutation.isPending) {
+              e.currentTarget.style.backgroundColor = "var(--background)";
+              e.currentTarget.style.color = "var(--primary)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!downloadMutation.isPending) {
+              e.currentTarget.style.backgroundColor = "var(--primary)";
+              e.currentTarget.style.color = "var(--primary-foreground)";
+            }
+          }}
+        >
+          {downloadMutation.isPending ? (
+            <Loader2Icon className="sm:size-4 size-2 animate-spin" />
+          ) : (
+            <DownloadIcon className="sm:size-4 size-2" />
+          )}
+        </button>
+        <button
+          onClick={() => window.open(piece.url, "_blank")}
+          className="sm:ml-4 sm:p-2 p-1 text-sm rounded-lg border-2 cursor-pointer transition-all disabled:cursor-not-allowed"
+          style={{
+            borderColor: "var(--primary)",
+            backgroundColor: "var(--primary)",
+            color: "var(--primary-foreground)",
+          }}
+        >
+          <EyeIcon className="sm:size-4 size-2" />
+        </button>
+        <button
+          onClick={() => deletePiece({ dataSet: dataset, pieceId: piece.id })}
+          className="sm:ml-4 sm:p-2 p-1 text-sm rounded-lg border-2 border-red-600 text-red-600 hover:text-white hover:bg-red-600 cursor-pointer transition-all disabled:cursor-not-allowed"
+          disabled={isDeletingPiece}
+        >
+          {isDeletingPiece ? (
+            <Loader2Icon className="sm:size-4 size-2 animate-spin" />
+          ) : (
+            <TrashIcon className="sm:size-4 size-2" />
+          )}
+        </button>
+      </div>
     </div>
   );
 };
