@@ -224,7 +224,9 @@ export function CreateDatasetModal({
             className="text-xs ml-7"
             style={{ color: "var(--muted-foreground)" }}
           >
-            Enable CDN for improved download speeds
+            <span className="text-xs italic">
+              Note: You need to pay up front 1 USDFC for CDN egress credits.
+            </span>
           </p>
         </div>
 
