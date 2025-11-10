@@ -4,7 +4,7 @@ import { calibration, mainnet } from '@filoz/synapse-core/chains'
 
 export const config = createConfig({
   chains: [calibration],
-  connectors: [injected(), metaMask(), coinbaseWallet()],
+  connectors: [injected()],
   transports: {
     [calibration.id]: http(undefined, {
       batch: false,
