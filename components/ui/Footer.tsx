@@ -105,8 +105,7 @@ export default function Footer() {
             variants={itemVariants}
             className="text-center text-sm sm:text-lg"
           >
-            <span className="hidden sm:inline">Build with </span>
-            <span className="sm:hidden">Made with </span>
+            <span>Built with </span>
             <motion.span
               animate={heartAnimation}
               className="inline-block"
@@ -114,7 +113,7 @@ export default function Footer() {
             >
               ❤️
             </motion.span>{" "}
-            for everyone
+            from FIL-Builders
           </motion.p>
         </motion.div>
       </motion.div>

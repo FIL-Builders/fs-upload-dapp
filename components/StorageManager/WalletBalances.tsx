@@ -1,6 +1,7 @@
 "use client";
 
 import { Tooltip } from "@/components/ui/Tooltip";
+import { InfoIcon } from "lucide-react";
 
 interface BalanceCardProps {
   label: string;
@@ -58,7 +59,7 @@ export const WalletBalances = ({
     >
       <div className="flex items-center gap-1">
         <div
-          className="text-xs font-medium mb-1"
+          className="text-xs font-medium"
           style={{ color: "var(--muted-foreground)" }}
         >
           {label}
@@ -68,7 +69,7 @@ export const WalletBalances = ({
             className="cursor-help"
             style={{ color: "var(--muted-foreground)" }}
           >
-            ⓘ
+            <InfoIcon className="w-4 h-4 " />
           </span>
         </Tooltip>
       </div>
@@ -125,24 +126,24 @@ export const WalletBalances = ({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <BalanceCard
-          label="FIL Balance"
+          label="tFIL Balance"
           value={balances?.filBalanceFormatted?.toFixed(5) || "0"}
-          currency="FIL"
-          tooltip="Your FIL (Filecoin) balance used for transaction fees and gas costs on the Filecoin network."
+          currency="tFIL"
+          tooltip="Your tFIL (Filecoin) balance used for transaction fees and gas costs on the Filecoin network."
         />
 
         <BalanceCard
-          label="USDFC Balance"
+          label="tUSDFC Balance"
           value={balances?.usdfcBalanceFormatted?.toFixed(5) || "0"}
-          currency="USDFC"
-          tooltip="Your USDFC (Filecoin USD Stablecoin) balance available for storage payments and deposits. This is used to pay for storage services."
+          currency="tUSDFC"
+          tooltip="Your tUSDFC (Filecoin USD Stablecoin) balance available for storage payments and deposits. This is used to pay for storage services."
         />
 
         <BalanceCard
           label="Storage Balance"
           value={balances?.warmStorageBalanceFormatted?.toFixed(5) || "0"}
-          currency="USDFC"
-          tooltip="The amount of USDFC deposited into the storage service on your behalf. This balance is actively used for ongoing storage costs and remains locked in the service contract."
+          currency="tUSDFC"
+          tooltip="The amount of tUSDFC deposited into the storage service on your behalf. This balance is actively used for ongoing storage costs and remains locked in the service contract."
         />
       </div>
     </div>

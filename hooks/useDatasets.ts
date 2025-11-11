@@ -8,13 +8,12 @@ import {
 } from "@filoz/synapse-sdk";
 import { useAccount } from "wagmi";
 import { DataSet } from "@/types";
-import { getDatasetsSizeInfo } from "@/utils/warmStorageUtils";
-import { getPieceInfoFromCidBytes } from "@/utils/cids";
-import { PieceSizeInfo } from "@/types";
-import { useEthersSigner } from "./useEthers";
+import { getDatasetSizeMessage } from "@/utils/storageCalculations";
+import { UnifiedSizeInfo as PieceSizeInfo } from "@/types";
+import { useEthersSigner } from "@/hooks/useEthers";
 import { Synapse } from "@filoz/synapse-sdk";
 import { useConfig } from "@/providers/ConfigProvider";
-import { getQueryKey } from "@/utils/constants";
+import { getPieceInfoFromCidBytes } from "@/utils/storageCalculations";
 
 /**
  * Hook to fetch and manage user datasets from Filecoin storage
@@ -26,25 +25,14 @@ import { getQueryKey } from "@/utils/constants";
  * 4. Enrich datasets with provider information and PDP data
  * 5. Handle errors gracefully while maintaining data integrity
  * 6. Implement caching and background refresh strategies
- *
- * @returns React Query result containing enriched datasets with provider info
- *
- * @example
- * const { data, isLoading, error } = useDatasets();
- *
- * if (data?.datasets?.length > 0) {
- *   const firstPieceCid = data.datasets[0]?.data?.pieces[0]?.pieceCid;
- *   console.log('Flag (First Piece CID):', firstPieceCid);
- * }
  */
 export const useDatasets = () => {
   const { address } = useAccount();
   const signer = useEthersSigner();
   const { config } = useConfig();
   return useQuery({
-    refetchInterval: 4000,
     enabled: !!address && signer?.address === address,
-    queryKey: getQueryKey("datasets", address),
+    queryKey: ["datasets", address],
     queryFn: async () => {
       // STEP 1: Validate prerequisites
       if (!signer) throw new Error("Signer not found");
@@ -57,30 +45,23 @@ export const useDatasets = () => {
       const datasets = await synapse.storage.findDataSets();
 
       // STEP 3: Fetch provider information with error handling
-      const datasetsSizeInfo = await getDatasetsSizeInfo(datasets, synapse);
-
       const providers = await Promise.all(
         datasets.map((dataset) => synapse.getProviderInfo(dataset.providerId))
       );
 
-      // STEP 4: Create provider ID to service URL mapping
-      const providerIdToServiceUrlMap = providers.reduce((acc, provider) => {
-        acc[provider.id] = provider.products.PDP?.data.serviceURL || "";
-        return acc;
-      }, {} as Record<string, string>);
-
       // STEP 5: Fetch detailed dataset information with PDP data
       const datasetDataResults = await Promise.all(
         datasets.map(async (dataset: EnhancedDataSetInfo) => {
-          const serviceURL = providerIdToServiceUrlMap[dataset.providerId];
-          const provider = providers.find((p) => p.id === dataset.providerId);
+          const provider = providers.find((p) => p.id === dataset.providerId)!
+          const serviceURL = provider.products.PDP?.data.serviceURL || "";
 
           try {
             // STEP 6: Connect to PDP server to get piece information
-            const pdpServer = new PDPServer(null, serviceURL || "");
+            const pdpServer = new PDPServer(null, serviceURL);
             const data = await pdpServer
               .getDataSet(dataset.pdpVerifierDataSetId)
               .then((data) => {
+                // Reverse to show most recent uploads first in UI
                 data.pieces.reverse();
                 return data;
               });
@@ -89,19 +70,26 @@ export const useDatasets = () => {
             const pieces = data.pieces.reduce(
               (acc, piece: DataSetPieceData) => {
                 acc[piece.pieceCid.toV1().toString()] =
-                  getPieceInfoFromCidBytes(piece.pieceCid.bytes);
+                  getPieceInfoFromCidBytes(piece.pieceCid);
                 return acc;
               },
               {} as Record<string, PieceSizeInfo>
             );
 
+            const datasetSizeInfo = data.pieces.reduce((acc, piece: DataSetPieceData) => {
+              acc.sizeInBytes += Number(pieces[piece.pieceCid.toV1().toString()].sizeBytes);
+              acc.sizeInKiB += Number(pieces[piece.pieceCid.toV1().toString()].sizeKiB);
+              acc.sizeInMiB += Number(pieces[piece.pieceCid.toV1().toString()].sizeMiB);
+              acc.sizeInGB += Number(pieces[piece.pieceCid.toV1().toString()].sizeGiB);
+              return acc;
+            }, { sizeInBytes: 0, sizeInKiB: 0, sizeInMiB: 0, sizeInGB: 0, message: "" });
+
             return {
               ...dataset,
-              provider: provider,
+              ...{ ...datasetSizeInfo, message: getDatasetSizeMessage(datasetSizeInfo) },
               serviceURL: serviceURL,
               data, // Contains pieces array with CIDs
               pieceSizes: pieces,
-              ...datasetsSizeInfo[dataset.pdpVerifierDataSetId],
             } as DataSet;
           } catch (error) {
             console.warn(
@@ -113,7 +101,6 @@ export const useDatasets = () => {
               ...dataset,
               provider: provider,
               serviceURL: serviceURL,
-              ...datasetsSizeInfo[dataset.pdpVerifierDataSetId],
             } as unknown as DataSet;
           }
         })
@@ -128,7 +115,7 @@ export const useDatasets = () => {
         return dataResult;
       });
 
-      return { datasets: datasetsWithDetails };
+      return datasetsWithDetails.filter((dataset) => !!dataset);
     },
   });
 };

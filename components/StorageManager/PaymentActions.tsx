@@ -2,30 +2,19 @@
 
 import { formatUnits } from "viem";
 import { useConfig } from "@/providers/ConfigProvider";
+import { UseBalancesResponse } from "@/types";
 
 interface PaymentPayload {
-  lockupAllowance: bigint;
-  epochRateAllowance: bigint;
-  depositAmount: bigint;
+  amount: bigint;
 }
 
 interface PaymentActionsProps {
-  balances: {
-    isSufficient?: boolean;
-    isRateSufficient?: boolean;
-    isLockupSufficient?: boolean;
-    filBalance?: bigint;
-    usdfcBalance?: bigint;
-    depositNeeded?: bigint;
-    totalLockupNeeded?: bigint;
-    rateNeeded?: bigint;
-    currentLockupAllowance?: bigint;
-    persistenceDaysLeft?: number;
-  } | null;
+  balances: UseBalancesResponse;
   isLoading?: boolean;
   isProcessingPayment?: boolean;
-  onPayment: (payload: PaymentPayload) => Promise<void>;
-  onRefreshBalances: () => Promise<any>;
+  isProcessingWithdraw?: boolean;
+  onWithdraw: () => Promise<void>;
+  onPayment: () => Promise<void>;
 }
 
 /**
@@ -49,20 +38,57 @@ export const PaymentActions = ({
   isLoading = false,
   isProcessingPayment = false,
   onPayment,
-  onRefreshBalances,
+  onWithdraw,
+  isProcessingWithdraw = false,
 }: PaymentActionsProps) => {
   const { config } = useConfig();
+  const canWithdraw = (balances.availableToFreeUp ?? 0n) > 0n;
   if (isLoading || !balances) return null;
 
-  // Success state
+  // Success state - no deposit needed and meets minimum threshold
   if (balances.isSufficient) {
+    const daysLeft = balances.daysLeft ?? 0;
+    const showThresholdWarning =
+      daysLeft < config.minDaysThreshold && daysLeft > 0;
+
+    if (showThresholdWarning) {
+      return (
+        <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+          <p className="text-yellow-800">
+            ⚠️ Low balance: {daysLeft.toFixed(1)} days left (target:{" "}
+            {config.minDaysThreshold}d). Capacity {config.storageCapacity} GB •
+            Plan {config.persistencePeriod} days
+          </p>
+          <p className="text-xs text-yellow-700 mt-1">
+            Consider depositing more USDFC to extend persistence.
+          </p>
+        </div>
+      );
+    }
+
     return (
-      <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-        <p className="text-green-800">
-          ✅ All set. Capacity {config.storageCapacity} GB • Days left{" "}
-          {balances.persistenceDaysLeft?.toFixed(1)} • Plan{" "}
-          {config.persistencePeriod} days{config.withCDN ? " • CDN On" : ""}.
-        </p>
+      <div className="space-y-4">
+        <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+          <p className="text-green-800">
+            ✅ All set. Capacity {config.storageCapacity} GB • Days left{" "}
+            {daysLeft.toFixed(1)} • Plan {config.persistencePeriod} days
+          </p>
+        </div>
+        {canWithdraw && (
+          <div className="p-4 bg-green-50 rounded-lg border border-green-200 gap-2 flex flex-col">
+            <p className="text-green-800">
+              ✅ You have {balances.availableToFreeUpFormatted} USDFC available
+              to withdraw while keeping your storage active
+            </p>
+            <PaymentButton
+              onClick={async () => {
+                await onWithdraw();
+              }}
+              isProcessing={isProcessingWithdraw}
+              label="Withdraw"
+            />
+          </div>
+        )}
       </div>
     );
   }
@@ -71,6 +97,8 @@ export const PaymentActions = ({
     formatUnits(balances?.depositNeeded ?? 0n, 18)
   ).toFixed(5);
   const needsDeposit = (balances.depositNeeded ?? 0n) > 0n;
+
+  console.log("balances.depositNeeded", balances.depositNeeded);
   const needsLockup = !balances.isLockupSufficient;
   const needsRate = !balances.isRateSufficient;
 
@@ -97,33 +125,42 @@ export const PaymentActions = ({
       <div className="p-4 bg-red-50 rounded-lg border border-red-200">
         <p className="text-red-800">⚠️ Action needed</p>
         <ul className="text-red-800 list-disc pl-5 mt-1 space-y-1">
-          {needsDeposit && <li>Deposit {depositNeeded} USDFC</li>}
-          {needsLockup && (
+          {needsDeposit && (
             <li>
-              Extend lockup to ≥ {config.minDaysThreshold} days (have{" "}
-              {balances.persistenceDaysLeft?.toFixed(1)}d)
+              Deposit {depositNeeded} USDFC to reach plan target you have set
+              the notification period to {config.minDaysThreshold} days and days
+              left based on your configured storage are{" "}
+              {balances.daysLeft?.toFixed(1)} days you are paying for additional{" "}
+              {(config.persistencePeriod - balances.daysLeft).toFixed(1)} days of storage.
+            </li>
+          )}
+          {needsLockup && !needsDeposit && (
+            <li>
+              Increase allowances to meet {config.minDaysThreshold} day
+              threshold (currently {balances.daysLeft?.toFixed(1)}d)
             </li>
           )}
           {needsRate && (
-            <li>Increase capacity to {config.storageCapacity} GB</li>
+            <li>
+              Increase rate allowance for {config.storageCapacity} GB capacity
+            </li>
           )}
         </ul>
         <p className="text-xs text-red-700 mt-2">
-          Target: {config.storageCapacity} GB • Plan {config.persistencePeriod}{" "}
-          days • CDN {config.withCDN ? "On" : "Off"}
+          Target: {config.storageCapacity} GB • {config.persistencePeriod} days
+          • Notification period: {config.minDaysThreshold} days
         </p>
       </div>
       <PaymentButton
         onClick={async () => {
-          await onPayment({
-            lockupAllowance: balances.totalLockupNeeded!,
-            epochRateAllowance: balances.rateNeeded!,
-            depositAmount: balances.depositNeeded!,
-          });
-          await onRefreshBalances();
+          await onPayment();
         }}
         isProcessing={isProcessingPayment}
-        label="Deposit & Increase Allowances"
+        label={
+          needsDeposit
+            ? "Deposit to reach plan target"
+            : "Increase Allowances to reach plan target"
+        }
       />
     </div>
   );
@@ -149,6 +186,6 @@ const PaymentButton = ({
         : "bg-black text-white hover:bg-white hover:text-black"
     }`}
   >
-    {isProcessing ? "Processing transactions..." : label}
+    {isProcessing ? "Processing transaction..." : label}
   </button>
 );

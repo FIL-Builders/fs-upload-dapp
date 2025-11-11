@@ -4,13 +4,9 @@
 import "./globals.css";
 import { WagmiProvider } from "wagmi";
 import { filecoinCalibration } from "wagmi/chains";
-import { http, createConfig } from "@wagmi/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import dynamic from "next/dynamic";
-const RainbowKitProvider = dynamic(
-  () => import("@rainbow-me/rainbowkit").then((m) => m.RainbowKitProvider),
-  { ssr: false }
-);
+import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
+
 import "@rainbow-me/rainbowkit/styles.css";
 import * as React from "react";
 import { Navbar } from "@/components/ui/Navbar";
@@ -19,6 +15,7 @@ import { ConfettiProvider } from "@/providers/ConfettiProvider";
 import { ConfigProvider } from "@/providers/ConfigProvider";
 import Footer from "@/components/ui/Footer";
 import { GeolocationProvider } from "@/providers/GeolocationProvider";
+import { wagmiConfig } from "@/services/wagmi";
 
 const queryClient = new QueryClient();
 
@@ -27,54 +24,6 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [wagmiConfig, setWagmiConfig] = React.useState<ReturnType<
-    typeof createConfig
-  > | null>(null);
-
-  React.useEffect(() => {
-    let mounted = true;
-    (async () => {
-      const [{ connectorsForWallets }, walletsModule] = await Promise.all([
-        import("@rainbow-me/rainbowkit"),
-        import("@rainbow-me/rainbowkit/wallets"),
-      ]);
-
-      const wagmiConnectors = connectorsForWallets(
-        [
-          {
-            groupName: "Supported Wallets",
-            wallets: [
-              walletsModule.metaMaskWallet,
-              walletsModule.walletConnectWallet,
-              walletsModule.ledgerWallet,
-              walletsModule.rainbowWallet,
-              walletsModule.safeWallet,
-              walletsModule.rabbyWallet,
-            ],
-          },
-        ],
-        {
-          appName: "filecoin-onchain-cloud-dapp",
-          projectId: "3a8170812b534d0ff9d794f19a901d64",
-        }
-      );
-
-      const cfg = createConfig({
-        ssr: false,
-        chains: [filecoinCalibration],
-        connectors: wagmiConnectors,
-        transports: {
-          [filecoinCalibration.id]: http(),
-        },
-      });
-
-      if (mounted) setWagmiConfig(cfg);
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
   return (
     <html lang="en">
       <head>
