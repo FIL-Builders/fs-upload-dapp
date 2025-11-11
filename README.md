@@ -23,7 +23,7 @@ This dApp showcases:
 
 1. Clone this repository:
 ```bash
-git clone https://github.com/yourusername/fs-upload-app
+git clone https://github.com/FIL-Builders/fs-upload-dapp
 cd fs-upload-app
 ```
 
