@@ -2,63 +2,28 @@
 import { useState, useCallback } from "react";
 import { useAccount } from "wagmi";
 import { useFileUpload } from "@/hooks/useFileUpload";
+import { DataSet } from "@/types";
+import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
 
 /**
- * File Upload Component for Filecoin Storage
+ * File upload interface with drag-and-drop, progress tracking, and automatic payment handling.
+ * Requires dataset selection before upload. Displays upload status and results (CID, tx hash).
  *
- * @description
- * A comprehensive file upload interface that handles the complete workflow of uploading
- * files to Filecoin storage. Features drag-and-drop functionality, progress tracking,
- * automatic payment handling, and detailed upload status reporting.
- *
- * @functionality
- * - **Drag & Drop Interface**: Modern file selection with drag-and-drop support
- * - **Progress Tracking**: Real-time upload progress with visual progress bar
- * - **Automatic Payments**: Seamlessly handles storage payments when needed
- * - **Status Updates**: Detailed status messages throughout the upload process
- * - **Upload Results**: Displays file information, piece CID, and transaction hash
- * - **Error Handling**: User-friendly error messages and retry functionality
- * - **State Management**: Clean reset functionality for new uploads
- *
- * @workflow Upload Process:
- * 1. **File Selection**: User selects file via drag-drop or file picker
- * 2. **Validation**: Check file and wallet connection
- * 3. **Cost Check**: Verify sufficient USDFC for storage costs
- * 4. **Payment**: Automatically handle payment if needed
- * 5. **Dataset Setup**: Create or resolve storage dataset
- * 6. **Upload**: Transfer file data to storage provider
- * 7. **Confirmation**: Wait for blockchain confirmation
- * 8. **Results**: Display upload details and piece information
- *
- * @example
- * ```tsx
- * function App() {
- *   return (
- *     <WagmiProvider>
- *       <div className="upload-container">
- *         <h1>Upload to Filecoin</h1>
- *         <FileUploader />
- *       </div>
- *     </WagmiProvider>
- *   );
- * }
- * ```
- *
- * @accessibility
- * - Keyboard navigation support for file selection
- * - Screen reader compatible status updates
- * - Focus management during upload process
- * - High contrast color support for progress indicators
- *
- * @security
- * - Client-side file validation
- * - Secure wallet integration
- * - No file data stored in browser memory unnecessarily
- * - Transaction confirmation required before completion
+ * @param datasetsData - Available datasets for file storage
+ * @param isLoadingDatasets - Loading state for datasets
  */
-export const FileUploader = () => {
+export const FileUploader = ({
+  datasetsData,
+  isLoadingDatasets,
+}: {
+  datasetsData: DataSet[];
+  isLoadingDatasets: boolean;
+}) => {
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [selectedDatasetId, setSelectedDatasetId] = useState<string>("");
+
   const { isConnected } = useAccount();
 
   const { uploadFileMutation, uploadedInfo, handleReset, status, progress } =
@@ -102,22 +67,88 @@ export const FileUploader = () => {
     return null;
   }
 
+  const hasDatasets = datasetsData.length > 0;
+
+  // Map dataset IDs to CDN configuration for upload
+  const datasetIdToWithCDN = datasetsData.reduce((acc, dataset) => {
+    if (dataset) {
+      acc[dataset.pdpVerifierDataSetId] = dataset.withCDN;
+    }
+    return acc;
+  }, {} as Record<string, boolean>);
+
   return (
     <div className="mt-4 p-6">
+      {/* Dataset Selection Section */}
+      <div className="mb-6">
+        {isLoadingDatasets ? (
+          <div
+            className="p-4 rounded-lg border text-center"
+            style={{
+              backgroundColor: "var(--muted)",
+              borderColor: "var(--border)",
+              color: "var(--muted-foreground)",
+            }}
+          >
+            Loading datasets...
+          </div>
+        ) : !hasDatasets ? (
+          <div
+            className="p-4 rounded-lg border text-center"
+            style={{
+              backgroundColor: "var(--muted)",
+              borderColor: "var(--border)",
+            }}
+          >
+            <p
+              className="text-sm mb-3"
+              style={{ color: "var(--muted-foreground)" }}
+            >
+              No active datasets found. You need to create a dataset before
+              uploading files.
+            </p>
+            <p
+              className="text-sm font-medium"
+              style={{ color: "var(--foreground)" }}
+            >
+              👉 Go to the <strong>Datasets</strong> tab to create a new dataset
+              first.
+            </p>
+          </div>
+        ) : (
+          <Select
+            label="Select Dataset"
+            value={selectedDatasetId}
+            onChange={setSelectedDatasetId}
+            disabled={isUploading}
+            placeholder="Select a dataset to upload to"
+            helperText="Choose which dataset to store your file in"
+            options={datasetsData.map((dataset) => ({
+              value: dataset.pdpVerifierDataSetId.toString(),
+              label: `Dataset #${dataset.pdpVerifierDataSetId} ${
+                dataset.withCDN ? "⚡" : ""
+              }`,
+            }))}
+          />
+        )}
+      </div>
+
       <div
         className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
           isDragging
             ? "border-blue-500 bg-blue-50"
             : "border-gray-300 hover:border-gray-400"
         } ${
-          isUploading ? "cursor-not-allowed text-gray-400" : "cursor-pointer"
+          isUploading || !hasDatasets
+            ? "cursor-not-allowed text-gray-400"
+            : "cursor-pointer"
         }`}
         onDragEnter={handleDragIn}
         onDragLeave={handleDragOut}
         onDragOver={handleDrag}
         onDrop={handleDrop}
         onClick={() => {
-          if (isUploading) return;
+          if (isUploading || !hasDatasets) return;
           document.getElementById("fileInput")?.click();
         }}
       >
@@ -147,9 +178,13 @@ export const FileUploader = () => {
             />
           </svg>
           <p className="text-lg font-medium">
-            {file ? file.name : "Drop your file here, or click to select"}
+            {!hasDatasets
+              ? "Create a dataset first to upload files"
+              : file
+              ? file.name
+              : "Drop your file here, or click to select"}
           </p>
-          {!file && (
+          {!file && hasDatasets && (
             <p className="text-sm text-gray-500">
               Drag and drop your file, or click to browse
             </p>
@@ -158,20 +193,19 @@ export const FileUploader = () => {
       </div>
 
       <div className="flex justify-center gap-4 mt-4">
-        <button
+        <Button
           onClick={async () => {
-            if (!file) return;
-            await uploadFile(file);
+            if (!file || !selectedDatasetId) return;
+            await uploadFile({
+              file,
+              datasetId: selectedDatasetId,
+              withCDN: datasetIdToWithCDN[selectedDatasetId],
+            });
           }}
-          disabled={(!file || isUploading || !!uploadedInfo) && !isError}
-          aria-disabled={(!file || isUploading || !!uploadedInfo) && !isError}
-          className={`px-6 py-2 rounded-[20px] text-center border-2 transition-all
-            ${
-              (!file || isUploading || !!uploadedInfo) && !isError
-                ? "border-gray-200 text-gray-400 cursor-not-allowed"
-                : "border-secondary text-secondary hover:bg-secondary/70 hover:text-secondary-foreground focus:outline-none focus:ring-2 focus:ring-secondary/50 hover:border-secondary/70 hover:cursor-pointer"
-            }
-          `}
+          disabled={
+            (!file || !selectedDatasetId || isUploading || !!uploadedInfo) &&
+            !isError
+          }
         >
           {isUploading && !isError
             ? "Uploading..."
@@ -180,24 +214,16 @@ export const FileUploader = () => {
             : isError
             ? "Error(Try again) 🔄"
             : "Submitted"}
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={() => {
             handleReset();
             setFile(null);
           }}
           disabled={!file || (isUploading && !isError)}
-          aria-disabled={!file || (isUploading && !isError)}
-          className={`px-6 py-2 rounded-[20px] text-center border-2 transition-all
-            ${
-              !file || (isUploading && !isError)
-                ? "border-gray-200 text-gray-400 cursor-not-allowed"
-                : "border-secondary text-secondary hover:bg-secondary/70 hover:text-secondary-foreground focus:outline-none focus:ring-2 focus:ring-secondary/50 hover:border-secondary/70 hover:cursor-pointer"
-            }
-          `}
         >
           Reset
-        </button>
+        </Button>
       </div>
       {status && (
         <div className="mt-4 text-center">
@@ -224,7 +250,6 @@ export const FileUploader = () => {
           )}
         </div>
       )}
-      {/* Uploaded file info panel */}
       {uploadedInfo && !isUploading && (
         <div className="mt-6 bg-background border border-border rounded-xl p-4 text-left">
           <h4 className="font-semibold mb-2 text-foreground">

@@ -20,19 +20,11 @@ export interface BalanceInfo {
   filBalanceFormatted?: number;
   usdfcBalanceFormatted?: number;
   warmStorageBalanceFormatted?: number;
-  rateAllowanceFormatted?: number;
-  lockupAllowanceFormatted?: number;
   isSufficient?: boolean;
-  isRateSufficient?: boolean;
-  isLockupSufficient?: boolean;
   filBalance?: bigint;
   usdfcBalance?: bigint;
   depositNeeded?: bigint;
-  totalLockupNeeded?: bigint;
-  rateNeeded?: bigint;
-  currentLockupAllowance?: bigint;
-  persistenceDaysLeft?: number;
-  currentRateAllowanceGB?: number;
+  daysLeft?: number;
 }
 
 // Payment action payload

@@ -1,6 +1,7 @@
 "use client";
 
 import { Tooltip } from "@/components/ui/Tooltip";
+import { InfoIcon } from "lucide-react";
 
 interface StorageCardProps {
   title: string;
@@ -64,9 +65,11 @@ export const StorageCard = ({
   }
 
   const hasData = usageGB > 0;
-  const progressColor = variant === "cdn" ? "var(--primary)" : "var(--muted-foreground)";
+  const progressColor =
+    variant === "cdn" ? "var(--primary)" : "var(--muted-foreground)";
   const statusIcon = variant === "cdn" ? "🌍" : "📦";
-  const statusText = variant === "cdn" ? "Global fast delivery active" : "Regular access speed";
+  const statusText =
+    variant === "cdn" ? "Global fast delivery active" : "Regular access speed";
 
   return (
     <div
@@ -76,14 +79,16 @@ export const StorageCard = ({
         borderColor: "var(--border)",
       }}
     >
-      <div className="flex items-center gap-2 mb-3">
-        <h4 className="text-sm font-semibold">{icon} {title}</h4>
+      <div className="flex items-center justify-center gap-2 mb-3">
+        <h4 className="text-sm font-semibold">
+          {icon} {title}
+        </h4>
         <Tooltip content={tooltipText}>
           <span
             className="cursor-help"
             style={{ color: "var(--muted-foreground)" }}
           >
-            ⓘ
+            <InfoIcon className="w-4 h-4" />
           </span>
         </Tooltip>
       </div>
@@ -91,9 +96,7 @@ export const StorageCard = ({
       {hasData ? (
         <div className="space-y-3">
           <div className="text-center">
-            <div className="text-2xl font-bold">
-              {usageGB.toFixed(5)} GB
-            </div>
+            <div className="text-2xl font-bold">{usageGB.toFixed(5)} GB</div>
             <div
               className="text-sm"
               style={{ color: "var(--muted-foreground)" }}
@@ -111,7 +114,7 @@ export const StorageCard = ({
                 className="h-2 rounded-full transition-all duration-300"
                 style={{
                   backgroundColor: progressColor,
-                  width: "100%"
+                  width: "100%",
                 }}
               />
             </div>
@@ -135,7 +138,8 @@ export const StorageCard = ({
             className="text-xs mt-1"
             style={{ color: "var(--muted-foreground)" }}
           >
-            Upload files for {variant === "cdn" ? "global fast access" : "regular storage"}
+            Upload files for{" "}
+            {variant === "cdn" ? "global fast access" : "regular storage"}
           </div>
         </div>
       )}

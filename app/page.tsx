@@ -2,7 +2,7 @@
 import { StorageManager } from "@/components/StorageManager";
 import { useAccount } from "wagmi";
 import { useEffect, useState } from "react";
-import { FileUploader } from "../components/FileUploader";
+import { FileUploader } from "@/components/FileUploader";
 import { motion, AnimatePresence } from "framer-motion";
 import Confetti from "@/components/ui/Confetti";
 import { useConfetti } from "@/hooks/useConfetti";
@@ -10,11 +10,14 @@ import { DatasetsViewer } from "@/components/DatasetsViewer";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useBalances } from "@/hooks/useBalances";
 import Github from "@/components/ui/icons/Github";
-import Filecoin from "@/components/ui/icons/Filecoin";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useDatasets } from "@/hooks/useDatasets";
 
+/** Valid tab identifiers for application navigation */
 type Tab = "manage-storage" | "upload" | "datasets";
 
+// Animation variants for smooth tab transitions using Framer Motion
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -37,28 +40,47 @@ const itemVariants = {
   },
 };
 
+/**
+ * Root page component orchestrating the main application UI.
+ * Manages tab-based navigation, data fetching, and distribution to child components.
+ * Synchronizes active tab with URL parameters for shareable links.
+ *
+ * @example
+ * URL patterns:
+ * - /?tab=manage-storage - Storage management dashboard
+ * - /?tab=upload - File upload interface
+ * - /?tab=datasets - Dataset viewer
+ */
 export default function Home() {
   const { isConnected } = useAccount();
   const [activeTab, setActiveTab] = useState<Tab>("manage-storage");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showConfetti } = useConfetti();
-  const { data: balances, isLoading: isLoadingBalances } = useBalances();
 
+  // Fetch data at top level and distribute via props for centralized loading state
+  const { data: balances, isLoading: isLoadingBalances } = useBalances();
+  const { data, isLoading: isLoadingDatasets } = useDatasets();
+  const datasetsData = data ?? [];
+  /** Type guard to validate tab parameter from URL */
   const isTab = (value: string | null): value is Tab =>
     value === "manage-storage" || value === "upload" || value === "datasets";
 
+  /** Updates URL query parameter to reflect active tab (enables shareable links) */
   const updateUrl = (tab: Tab) => {
     const params = new URLSearchParams(searchParams?.toString());
     params.set("tab", tab);
     router.replace(`?${params.toString()}`);
   };
 
+  /** Handles tab switching with URL synchronization */
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
     updateUrl(tab);
   };
 
+  // Bidirectional sync: URL param ↔ local state
+  // URL is source of truth on mount, state updates URL on change
   useEffect(() => {
     const tabParam = searchParams?.get("tab");
     if (isTab(tabParam) && tabParam !== activeTab) {
@@ -98,7 +120,13 @@ export default function Home() {
           className="text-3xl font-bold uppercase tracking-tighter text-foreground flex flex-col sm:flex-row items-center gap-2"
         >
           <div className="flex items-center gap-2">
-            <Filecoin />
+            <Image
+              src="/filecoin.svg"
+              alt="Filecoin"
+              width={30}
+              height={30}
+              style={{ height: "30px", width: "30px" }}
+            />
             <span>Filecoin onchain cloud</span>
           </div>
           <motion.a
@@ -216,7 +244,7 @@ export default function Home() {
                 </motion.button>
               </motion.div>
 
-              <AnimatePresence mode="wait">
+              <AnimatePresence>
                 <motion.div
                   key="deposit"
                   className={`${
@@ -231,7 +259,11 @@ export default function Home() {
                     damping: 20,
                   }}
                 >
-                  <StorageManager />
+                  <StorageManager
+                    datasetsData={datasetsData ?? []}
+                    balances={balances}
+                    isBalanceLoading={isLoadingBalances}
+                  />
                 </motion.div>
                 <motion.div
                   key="upload"
@@ -246,7 +278,10 @@ export default function Home() {
                     type: "smooth",
                   }}
                 >
-                  <FileUploader />
+                  <FileUploader
+                    datasetsData={datasetsData}
+                    isLoadingDatasets={isLoadingDatasets}
+                  />
                 </motion.div>
 
                 <motion.div
@@ -263,7 +298,10 @@ export default function Home() {
                     damping: 20,
                   }}
                 >
-                  <DatasetsViewer />
+                  <DatasetsViewer
+                    datasetsData={datasetsData}
+                    isLoadingDatasets={isLoadingDatasets}
+                  />
                 </motion.div>
               </AnimatePresence>
             </motion.div>

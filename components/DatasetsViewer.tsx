@@ -1,18 +1,49 @@
-// components/ViewProofSets.tsx
+// components/DatasetsViewer.tsx
 "use client";
 
+import { useState } from "react";
 import { useAccount } from "wagmi";
-import { useDatasets } from "@/hooks/useDatasets";
-import { useDownloadPiece } from "@/hooks/useDownloadPiece";
+import {
+  useDownloadPiece,
+  useOpenPieceDataInNewTab,
+} from "@/hooks/useDownloadPiece";
+import { CopyableURL } from "@/components/ui/CopyableURL";
+import { CreateDatasetModal } from "@/components/ui/CreateDatasetModal";
+import { DownloadIcon, EyeIcon, Loader2Icon } from "lucide-react";
+import {
+  getPieceInfoFromCidBytes,
+  getDatasetSizeMessage,
+} from "@/utils/storageCalculations";
 import { DataSet } from "@/types";
 import { DataSetPieceData } from "@filoz/synapse-sdk";
-import { CopyableURL } from "@/components/ui/CopyableURL";
+/**
+ * Displays and manages user's Filecoin storage datasets.
+ * Shows dataset metadata, status, files (pieces), and provides download functionality.
+ * Allows creation of new datasets via modal dialog.
+ *
+ * @param datasetsData - Array of user datasets with pieces and metadata
+ * @param isLoadingDatasets - Loading state for datasets fetch
+ *
+ * @example
+ * ```tsx
+ * <DatasetsViewer
+ *   datasetsData={datasets}
+ *   isLoadingDatasets={isLoading}
+ * />
+ * ```
+ */
+export const DatasetsViewer = ({
+  datasetsData,
+  isLoadingDatasets,
+}: {
+  datasetsData: DataSet[];
+  isLoadingDatasets: boolean;
+}) => {
+  const { isConnected, address } = useAccount();
 
-export const DatasetsViewer = () => {
-  const { isConnected } = useAccount();
-  const { data, isLoading: isLoadingDatasets } = useDatasets();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  if (!isConnected) {
+  if (!isConnected || !address) {
     return null;
   }
 
@@ -45,6 +76,22 @@ export const DatasetsViewer = () => {
             View and manage your storage datasets
           </p>
         </div>
+        <button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="sm:px-4 sm:py-1 px-2 py-1 text-sm rounded-lg transition-colors touch-manipulation "
+          style={{
+            backgroundColor: "var(--primary)",
+            color: "var(--primary-foreground)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = "0.9";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = "1";
+          }}
+        >
+          Create New Dataset
+        </button>
       </div>
 
       {isLoadingDatasets ? (
@@ -53,31 +100,32 @@ export const DatasetsViewer = () => {
             Loading datasets...
           </p>
         </div>
-      ) : data && data.datasets && data.datasets.length > 0 ? (
+      ) : datasetsData && datasetsData.length > 0 ? (
         <div className="mt-4 space-y-6">
-          {data.datasets.map(
+          {datasetsData.map(
             (dataset: DataSet | undefined) =>
               dataset && (
                 <div
-                  key={dataset.clientDataSetId}
-                  className="rounded-lg p-4 border"
+                  key={dataset.dataSetId.toString()}
+                  className="rounded-lg p-4 border flex flex-col justify-between w-full"
                   style={{
                     backgroundColor: "var(--muted)",
                     borderColor: "var(--border)",
                   }}
                 >
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="flex sm:flex-row flex-col justify-between">
                     <div>
                       <h4
                         className="text-lg font-medium"
                         style={{ color: "var(--foreground)" }}
                       >
-                        Dataset #{dataset.pdpVerifierDataSetId}
+                        Dataset #{dataset.dataSetId}
                       </h4>
                       <p
                         className="text-sm mt-1"
                         style={{ color: "var(--muted-foreground)" }}
                       >
+                        {/* Status: "Live" = active and accepting files, "Inactive" = not accepting new files */}
                         Status:{" "}
                         <span
                           className="font-medium"
@@ -106,25 +154,24 @@ export const DatasetsViewer = () => {
                         className="text-sm mt-1"
                         style={{ color: "var(--muted-foreground)" }}
                       >
-                        PDP URL:{" "}
-                        <CopyableURL
-                          url={dataset.provider?.products.PDP?.data.serviceURL}
-                        />
+                        {/* PDP (Proof of Data Possession) service URL for piece verification and retrieval */}
+                        PDP URL: <CopyableURL url={dataset.serviceURL} />
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div>
                       <p
                         className="text-sm"
                         style={{ color: "var(--muted-foreground)" }}
                       >
-                        {dataset.message}
+                        {getDatasetSizeMessage(dataset)}
                       </p>
 
                       <p
                         className="text-sm"
                         style={{ color: "var(--muted-foreground)" }}
                       >
-                        Commission: {dataset.commissionBps / 100}%
+                        {/* Commission basis points divided by 100 to get percentage (e.g., 500 BPS = 5%) */}
+                        Commission: {Number(dataset.commissionBps) / 100}%
                       </p>
                       <p
                         className="text-sm"
@@ -144,31 +191,26 @@ export const DatasetsViewer = () => {
                       }}
                     >
                       {dataset.data?.pieces && (
-                        <div>
-                          <div className="flex justify-between items-center mb-2">
+                        <div className="w-full">
+                          <div className="sm:flex flex-col sm:justify-between items-start mb-2 w-full">
                             <h6
                               className="text-sm font-medium"
                               style={{ color: "var(--foreground)" }}
                             >
-                              {`Stored Files: #${dataset.currentPieceCount}`}
+                              {`Stored Files: #${dataset.data?.pieces.length}`}
                             </h6>
-                            <p
-                              className="text-sm"
-                              style={{ color: "var(--muted-foreground)" }}
-                            >
-                              Next Challenge: Epoch{" "}
-                              {dataset.data.nextChallengeEpoch}
-                            </p>
                           </div>
                           <div className="space-y-2">
-                            {dataset.data.pieces.map((piece) => (
+                            {dataset.data?.pieces.reverse().map((piece) => (
                               <PieceDetails
-                                key={piece.pieceId}
+                                key={piece.pieceId.toString()}
                                 piece={piece}
+                                isCDN={dataset.withCDN}
                                 pieceSizeMiB={
-                                  dataset.pieceSizes[piece.pieceCid.toString()]
+                                  getPieceInfoFromCidBytes(piece.pieceCid)
                                     .sizeMiB
                                 }
+                                url={dataset.serviceURL}
                               />
                             ))}
                           </div>
@@ -185,19 +227,32 @@ export const DatasetsViewer = () => {
           <p style={{ color: "var(--muted-foreground)" }}>No datasets found</p>
         </div>
       )}
+
+      <CreateDatasetModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+      />
     </div>
   );
 };
 
 /**
- * Component to display a piece and a download button
+ * Displays individual piece (file) within a dataset.
+ * Shows piece metadata and provides download functionality.
+ *
+ * @param piece - Piece data including CID and size
+ * @param pieceSizeMiB - File size in megabytes
  */
 const PieceDetails = ({
   piece,
   pieceSizeMiB,
+  isCDN,
+  url,
 }: {
   piece: DataSetPieceData;
   pieceSizeMiB: number;
+  isCDN: boolean;
+  url: string;
 }) => {
   const filename = `piece-${piece.pieceCid}`;
   const { downloadMutation } = useDownloadPiece(
@@ -205,10 +260,16 @@ const PieceDetails = ({
     filename
   );
 
+  const { openPieceDataInNewTabMutation } = useOpenPieceDataInNewTab(
+    piece.pieceCid.toString(),
+    isCDN,
+    url
+  );
+
   return (
     <div
       key={piece.pieceId.toString()}
-      className="flex items-center justify-between p-2 rounded border"
+      className="sm:flex flex-col justify-between p-2 rounded border"
       style={{
         backgroundColor: "var(--muted)",
         borderColor: "var(--border)",
@@ -225,7 +286,7 @@ const PieceDetails = ({
           className="text-xs truncate"
           style={{ color: "var(--muted-foreground)" }}
         >
-          {piece.pieceCid.toString()}
+          {piece?.pieceCid?.toString()}
         </p>
         <p
           className="text-xs truncate"
@@ -234,36 +295,57 @@ const PieceDetails = ({
           {`File size: ${Number(pieceSizeMiB.toFixed(4))} MB`}
         </p>
       </div>
-      <button
-        onClick={() => downloadMutation.mutate()}
-        disabled={downloadMutation.isPending}
-        className="ml-4 px-3 py-1 text-sm rounded-lg border-2 cursor-pointer transition-all disabled:cursor-not-allowed"
-        style={{
-          borderColor: downloadMutation.isPending
-            ? "var(--muted)"
-            : "var(--primary)",
-          backgroundColor: downloadMutation.isPending
-            ? "var(--muted)"
-            : "var(--primary)",
-          color: downloadMutation.isPending
-            ? "var(--muted-foreground)"
-            : "var(--primary-foreground)",
-        }}
-        onMouseEnter={(e) => {
-          if (!downloadMutation.isPending) {
-            e.currentTarget.style.backgroundColor = "var(--background)";
-            e.currentTarget.style.color = "var(--primary)";
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!downloadMutation.isPending) {
-            e.currentTarget.style.backgroundColor = "var(--primary)";
-            e.currentTarget.style.color = "var(--primary-foreground)";
-          }
-        }}
-      >
-        {downloadMutation.isPending ? "Downloading..." : "Download"}
-      </button>
+      <div className="flex flex-row justify-end gap-2 p-2">
+        <button
+          onClick={() => downloadMutation.mutate()}
+          disabled={downloadMutation.isPending}
+          className="sm:ml-4 sm:p-2 p-1 text-sm rounded-lg border-2 cursor-pointer transition-all disabled:cursor-not-allowed"
+          style={{
+            borderColor: downloadMutation.isPending
+              ? "var(--muted)"
+              : "var(--primary)",
+            backgroundColor: downloadMutation.isPending
+              ? "var(--muted)"
+              : "var(--primary)",
+            color: downloadMutation.isPending
+              ? "var(--muted-foreground)"
+              : "var(--primary-foreground)",
+          }}
+          onMouseEnter={(e) => {
+            if (!downloadMutation.isPending) {
+              e.currentTarget.style.backgroundColor = "var(--background)";
+              e.currentTarget.style.color = "var(--primary)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!downloadMutation.isPending) {
+              e.currentTarget.style.backgroundColor = "var(--primary)";
+              e.currentTarget.style.color = "var(--primary-foreground)";
+            }
+          }}
+        >
+          {downloadMutation.isPending ? (
+            <Loader2Icon className="sm:size-4 size-2 animate-spin" />
+          ) : (
+            <DownloadIcon className="sm:size-4 size-2" />
+          )}
+        </button>
+        <button
+          onClick={() => openPieceDataInNewTabMutation.mutate()}
+          className="sm:ml-4 sm:p-2 p-1 text-sm rounded-lg border-2 cursor-pointer transition-all disabled:cursor-not-allowed"
+          style={{
+            borderColor: "var(--primary)",
+            backgroundColor: "var(--primary)",
+            color: "var(--primary-foreground)",
+          }}
+        >
+          {openPieceDataInNewTabMutation.isPending ? (
+            <Loader2Icon className="w-4 h-4 animate-spin" />
+          ) : (
+            <EyeIcon className="w-4 h-4" />
+          )}{" "}
+        </button>
+      </div>
     </div>
   );
 };
