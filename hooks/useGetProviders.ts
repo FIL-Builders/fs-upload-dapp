@@ -1,8 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAccount } from "wagmi";
-import { Synapse, WarmStorageService } from "@filoz/synapse-sdk";
-import { SPRegistryService } from "@filoz/synapse-sdk/sp-registry";
-
+import { Synapse } from "@filoz/synapse-sdk";
 import { useEthersSigner } from "@/hooks/useEthers";
 
 /**
@@ -15,7 +13,7 @@ export const useGetProviders = () => {
   const { address } = useAccount();
   const signer = useEthersSigner();
   return useQuery({
-    queryKey: ["getProviders"], // No address: providers list is same for all users
+    queryKey: ["getProviders"],
     queryFn: async () => {
       // === VALIDATION AND INITIALIZATION ===
       if (!signer) throw new Error("Signer not found");
@@ -25,36 +23,10 @@ export const useGetProviders = () => {
         signer,
       });
 
-      // Get warm storage contract address (Filecoin's fast-retrieval storage layer)
-      const warmStorageAddress = synapse.getWarmStorageAddress();
-      const warmStorageService = await WarmStorageService.create(
-        synapse.getProvider(),
-        warmStorageAddress
-      );
-
-      // Service provider registry tracks all registered storage providers for the network
-      const serviceProviderRegistryAddress =
-        warmStorageService.getServiceProviderRegistryAddress();
-      const serviceProviderRegistryService = await SPRegistryService.create(
-        synapse.getProvider(),
-        serviceProviderRegistryAddress
-      );
+      const storageInfo = await synapse.getStorageInfo();
 
       // Fetch all active providers (registered in system)
-      const providers =
-        await serviceProviderRegistryService.getAllActiveProviders();
-      // Filter to only approved providers (verified and available for deals)
-      const approvedProviders = await Promise.all(
-        providers.map(async (provider) => {
-          try {
-            return await synapse.getProviderInfo(provider.serviceProvider);
-          } catch {
-            // Return null for failed providers (allows partial results if some providers error)
-            return null;
-          }
-        })
-      );
-      return approvedProviders.filter((provider) => provider !== null);
+      return storageInfo.providers;
     },
   });
 };
