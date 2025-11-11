@@ -82,7 +82,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </label>
           <input
             type="number"
-            min="1"
+            min="25"
             max="1000"
             value={localConfig.storageCapacity}
             onChange={(e) =>
@@ -99,7 +99,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             }}
           />
           <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-            The number of GB of storage capacity needed to be sufficient
+            The number of GB of storage capacity you want to allocate.
           </p>
         </div>
 
@@ -113,8 +113,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </label>
           <input
             type="number"
-            min="1"
-            max="365"
+            min="30"
             value={localConfig.persistencePeriod}
             onChange={(e) =>
               handleInputChange(
@@ -130,7 +129,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             }}
           />
           <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-            The number of days of lockup needed to be sufficient
+            The number of days that you want to keep your files stored.
           </p>
         </div>
 
@@ -140,12 +139,11 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             className="block text-sm font-medium"
             style={{ color: "var(--foreground)" }}
           >
-            Minimum Days Threshold
+            Notification Period
           </label>
           <input
             type="number"
-            min="1"
-            max="365"
+            min="30"
             value={localConfig.minDaysThreshold}
             onChange={(e) =>
               handleInputChange(
@@ -161,35 +159,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             }}
           />
           <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-            The minimum number of days of lockup needed to notify for more
-            storage
-          </p>
-        </div>
-
-        {/* CDN: Content Delivery Network for faster file retrieval (higher cost) */}
-        <div className="space-y-2">
-          <label className="flex items-center space-x-3">
-            <input
-              type="checkbox"
-              checked={localConfig.withCDN}
-              onChange={(e) => handleInputChange("withCDN", e.target.checked)}
-              className="w-4 h-4 rounded transition-colors"
-              style={{
-                accentColor: "var(--primary)",
-              }}
-            />
-            <span
-              className="text-sm font-medium"
-              style={{ color: "var(--foreground)" }}
-            >
-              Use CDN for faster retrieval
-            </span>
-          </label>
-          <p
-            className="text-xs ml-7"
-            style={{ color: "var(--muted-foreground)" }}
-          >
-            Whether to use CDN for the storage for faster retrieval
+            The number of days before the app will notify you to pay for more
+            storage. By default you always need to pay for 30 days in advance.
           </p>
         </div>
       </div>

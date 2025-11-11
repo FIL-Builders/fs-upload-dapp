@@ -5,11 +5,11 @@
 
 export const config = {
   // The number of GB of storage capacity needed to be sufficient
-  storageCapacity: 100,
+  storageCapacity: 150,
   // The number of days of lockup needed to be sufficient
-  persistencePeriod: 30,
+  persistencePeriod: 365,
   // The minimum number of days of lockup needed to be sufficient
-  minDaysThreshold: 10,
+  minDaysThreshold: 50,
   // Whether to use CDN for the storage for faster retrieval
   withCDN: true,
 } satisfies {
