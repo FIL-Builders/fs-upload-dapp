@@ -31,7 +31,7 @@ export const useCreateDataset = () => {
   const queryClient = useQueryClient();
   const { mutation: paymentMutation } = usePayment(true);
   const mutation = useMutation({
-    mutationKey: ["createDataset", address],
+    mutationKey: ["createDataset", address, chainId],
     mutationFn: async ({
       withCDN,
       providerId,
@@ -127,7 +127,7 @@ export const useCreateDataset = () => {
       triggerConfetti();
       // Invalidate datasets query to trigger refetch and update UI with new dataset
       queryClient.invalidateQueries({
-        queryKey: ["datasets", address],
+        queryKey: ["datasets", address, chainId],
       });
     },
     onError: (error) => {

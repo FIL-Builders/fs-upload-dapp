@@ -20,7 +20,7 @@ export const useWithdraw = (ignoreConfetti = false) => {
   const { config } = useConfig();
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationKey: ["withdraw", address],
+    mutationKey: ["withdraw", address, chainId],
     mutationFn: async ({ amount }: { amount: bigint }) => {
       // === VALIDATION PHASE ===
       // Ensure all required dependencies are available before proceeding
@@ -47,7 +47,7 @@ export const useWithdraw = (ignoreConfetti = false) => {
         triggerConfetti();
       }
       queryClient.invalidateQueries({
-        queryKey: ["balances", address, config],
+        queryKey: ["balances", address, config, chainId],
       });
     },
     onError: (error) => {

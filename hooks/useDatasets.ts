@@ -27,12 +27,12 @@ import { getPieceInfoFromCidBytes } from "@/utils/storageCalculations";
  * 6. Implement caching and background refresh strategies
  */
 export const useDatasets = () => {
-  const { address } = useAccount();
+  const { address, chainId } = useAccount();
   const signer = useEthersSigner();
   const { config } = useConfig();
   return useQuery({
     enabled: !!address && signer?.address === address,
-    queryKey: ["datasets", address],
+    queryKey: ["datasets", address, chainId],
     queryFn: async () => {
       // STEP 1: Validate prerequisites
       if (!signer) throw new Error("Signer not found");

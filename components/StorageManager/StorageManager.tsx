@@ -10,6 +10,11 @@ import { PaymentActions } from "./PaymentActions";
 import { UseBalancesResponse } from "@/types";
 import { getDatasetsSizes } from "@/utils/storageCalculations";
 import { DataSet } from "@/types";
+import { CONTRACT_ADDRESSES } from "@filoz/synapse-sdk";
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { SettingsIcon } from "lucide-react";
+import { SettingsModal } from "../ui/SettingsModal";
 /**
  * Comprehensive Storage Manager Component for Filecoin Storage Operations
  *
@@ -93,16 +98,21 @@ export const StorageManager = ({
   datasetsData: DataSet[];
   isBalanceLoading: boolean;
 }) => {
-  const { isConnected } = useAccount();
+  const { isConnected, chainId } = useAccount();
+
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const addAsset = useWatchAsset();
 
+  const isMainnet = chainId === 314;
   const handleAddAsset = async () => {
     addAsset.watchAsset({
       type: "ERC20",
       options: {
-        address: "0xb3042734b608a1B16e9e86B374A3f3e389B4cDf0",
-        symbol: "tUSDFC",
+        address: isMainnet
+          ? CONTRACT_ADDRESSES.USDFC.mainnet
+          : CONTRACT_ADDRESSES.USDFC.calibration,
+        symbol: isMainnet ? "USDFC" : "tUSDFC",
         decimals: 18,
       },
     });
@@ -129,33 +139,56 @@ export const StorageManager = ({
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
           <h2 className="text-xl sm:text-2xl font-bold">Storage Manager</h2>
           <div className="flex items-center gap-2">
+            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+              <button
+                onClick={() => setIsSettingsOpen(true)}
+                className="rounded-lg transition-colors touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
+                style={{
+                  backgroundColor: "transparent",
+                  color: "var(--foreground)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--muted)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
+                aria-label="Open settings"
+              >
+                <SettingsIcon className="md:size-5 size-4" />
+              </button>
+            </motion.div>
+            {!isMainnet && (
+              <button
+                className="md:px-4 px-2 md:py-2 py-1 md:text-sm text-xs h-9 flex items-center justify-center rounded-lg border-2 border-black transition-all bg-black text-white hover:bg-white hover:text-black"
+                onClick={() => {
+                  window.open(
+                    "https://forest-explorer.chainsafe.dev/faucet/calibnet_usdfc",
+                    "_blank"
+                  );
+                }}
+              >
+                Get tUSDFC
+              </button>
+            )}
+            {!isMainnet && (
+              <button
+                className="md:px-4 px-2 md:py-2 py-1 md:text-sm text-xs h-9 flex items-center justify-center rounded-lg border-2 border-black transition-all bg-black text-white hover:bg-white hover:text-black"
+                onClick={() => {
+                  window.open(
+                    "https://faucet.calibnet.chainsafe-fil.io/funds.html",
+                    "_blank"
+                  );
+                }}
+              >
+                Get tFIL
+              </button>
+            )}
             <button
-              className="px-4 py-2 text-sm h-9 flex items-center justify-center rounded-lg border-2 border-black transition-all bg-black text-white hover:bg-white hover:text-black"
-              onClick={() => {
-                window.open(
-                  "https://forest-explorer.chainsafe.dev/faucet/calibnet_usdfc",
-                  "_blank"
-                );
-              }}
-            >
-              Get tUSDFC
-            </button>
-            <button
-              className="px-4 py-2 text-sm h-9 flex items-center justify-center rounded-lg border-2 border-black transition-all bg-black text-white hover:bg-white hover:text-black"
-              onClick={() => {
-                window.open(
-                  "https://faucet.calibnet.chainsafe-fil.io/funds.html",
-                  "_blank"
-                );
-              }}
-            >
-              Get tFIL
-            </button>
-            <button
-              className="px-4 py-2 text-sm h-9 flex items-center justify-center rounded-lg border-2 border-black transition-all bg-black text-white hover:bg-white hover:text-black"
+              className="md:px-4 px-2 md:py-2 py-1 md:text-sm text-xs h-9 flex items-center justify-center rounded-lg border-2 border-black transition-all bg-black text-white hover:bg-white hover:text-black"
               onClick={handleAddAsset}
             >
-              Add tUSDFC
+              {!isMainnet ? "Add tUSDFC" : "Add USDFC"}
             </button>
           </div>
         </div>
@@ -259,6 +292,10 @@ export const StorageManager = ({
           </div>
         )}
       </div>
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
     </div>
   );
 };

@@ -117,30 +117,24 @@ export default function Home() {
           variants={itemVariants}
           whileHover={{ scale: 1.05 }}
           transition={{ duration: 0.3 }}
-          className="text-3xl font-bold uppercase tracking-tighter text-foreground flex flex-col sm:flex-row items-center gap-2"
+          className="sm:text-3xl text-xl font-bold uppercase tracking-tighter text-foreground flex flex-col sm:flex-row items-center gap-2"
         >
           <div className="flex items-center gap-2">
-            <Image
-              src="/filecoin.svg"
-              alt="Filecoin"
-              width={30}
-              height={30}
-              style={{ height: "30px", width: "30px" }}
-            />
+            <Image src="/filecoin.svg" alt="Filecoin" width={30} height={30} />
             <span>Filecoin onchain cloud</span>
           </div>
-          <motion.a
-            whileHover={{ scale: 1.3 }}
-            href="https://github.com/FIL-Builders/fs-upload-dapp"
-            className="text-primary transition-colors duration-200 hover:underline cursor-pointer rounded-md hover:text-[#008cf6]"
-            target="_blank"
-          >
-            <Github />
-          </motion.a>
           <motion.p
             variants={itemVariants}
-            className="text-xl font-semibold lowercase transition-colors duration-50 hover:text-foreground flex flex-col sm:flex-row items-center gap-2"
+            className="text-xl font-semibold lowercase transition-colors duration-50 hover:text-foreground flex flex-row items-center gap-2"
           >
+            <motion.a
+              whileHover={{ scale: 1.3 }}
+              href="https://github.com/FIL-Builders/fs-upload-dapp"
+              className="text-primary transition-colors duration-200 hover:underline cursor-pointer rounded-md hover:text-[#008cf6]"
+              target="_blank"
+            >
+              <Github />
+            </motion.a>
             <span>powered by</span>
             <motion.a
               href="https://github.com/FilOzone/synapse-sdk"
@@ -156,16 +150,19 @@ export default function Home() {
           variants={itemVariants}
           className="text-lg font-semibold capitalize-none transition-colors duration-50 mb-2 mt-1 hover:text-foreground flex flex-col sm:flex-row items-center gap-2 text-center"
         >
-          <span>upload files to filecoin with</span>
-          <motion.a
-            href="https://docs.secured.finance/usdfc-stablecoin/getting-started"
-            className="text-[#e9ac00] hover:underline cursor-pointer"
-            target="_blank"
-          >
-            USDFC
-          </motion.a>
-          <span>your balance is</span>
-          <span className="font-bold">
+          <span>
+            upload files to filecoin with{" "}
+            <motion.a
+              href="https://docs.secured.finance/usdfc-stablecoin/getting-started"
+              className="text-[#e9ac00] hover:underline cursor-pointer"
+              target="_blank"
+            >
+              USDFC
+            </motion.a>
+          </span>
+
+          <span className="hidden sm:inline">your balance is</span>
+          <span className="font-bold hidden sm:inline">
             {isLoadingBalances || !isConnected
               ? "..."
               : balances?.usdfcBalanceFormatted.toFixed(1) + "$"}
@@ -203,14 +200,14 @@ export default function Home() {
             <motion.div
               key="content"
               variants={itemVariants}
-              className="mt-3 max-w-5xl w-full border-1 rounded-lg p-8"
+              className="mt-3 max-w-5xl w-full border rounded-lg p-8"
             >
               <motion.div variants={itemVariants} className="flex mb-6">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => handleTabChange("manage-storage")}
-                  className={`flex-1 py-2 px-4 text-center border-b-2 transition-colors ${
+                  className={`flex-1 py-2 px-4 text-center border-b-2 sm:text-lg text-xs transition-colors ${
                     activeTab === "manage-storage"
                       ? "border-primary text-primary-foreground bg-primary"
                       : "border-transparent text-secondary hover:text-primary hover:bg-secondary/10"
@@ -222,7 +219,7 @@ export default function Home() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => handleTabChange("upload")}
-                  className={`flex-1 py-2 px-4 text-center border-b-2 transition-colors ${
+                  className={`flex-1 py-2 px-4 text-center border-b-2 sm:text-lg text-xs transition-colors ${
                     activeTab === "upload"
                       ? "border-primary text-primary-foreground bg-primary"
                       : "border-transparent text-secondary hover:text-primary hover:bg-secondary/10"
@@ -234,7 +231,7 @@ export default function Home() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => handleTabChange("datasets")}
-                  className={`flex-1 py-2 px-4 text-center border-b-2 transition-colors ${
+                  className={`flex-1 py-2 px-4 text-center border-b-2 sm:text-lg text-xs transition-colors ${
                     activeTab === "datasets"
                       ? "border-primary text-primary-foreground bg-primary"
                       : "border-transparent text-secondary hover:text-primary hover:bg-secondary/10"
@@ -244,7 +241,7 @@ export default function Home() {
                 </motion.button>
               </motion.div>
 
-              <AnimatePresence>
+              <AnimatePresence mode="wait">
                 <motion.div
                   key="deposit"
                   className={`${
@@ -260,8 +257,8 @@ export default function Home() {
                   }}
                 >
                   <StorageManager
-                    datasetsData={datasetsData ?? []}
                     balances={balances}
+                    datasetsData={datasetsData ?? []}
                     isBalanceLoading={isLoadingBalances}
                   />
                 </motion.div>
@@ -279,7 +276,7 @@ export default function Home() {
                   }}
                 >
                   <FileUploader
-                    datasetsData={datasetsData}
+                    datasetsData={datasetsData ?? []}
                     isLoadingDatasets={isLoadingDatasets}
                   />
                 </motion.div>
@@ -299,7 +296,7 @@ export default function Home() {
                   }}
                 >
                   <DatasetsViewer
-                    datasetsData={datasetsData}
+                    datasetsData={datasetsData ?? []}
                     isLoadingDatasets={isLoadingDatasets}
                   />
                 </motion.div>
