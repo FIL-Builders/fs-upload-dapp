@@ -15,18 +15,9 @@ import { ThemeProvider } from "@/providers/ThemeProvider";
 import { ConfettiProvider } from "@/providers/ConfettiProvider";
 import { ConfigProvider } from "@/providers/ConfigProvider";
 import Footer from "@/components/ui/Footer";
-import { GeolocationProvider } from "@/providers/GeolocationProvider";
 import { config } from "@/services/wagmi";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      gcTime: 1000 * 60 * 60 * 24, // 24 hours
-      networkMode: "offlineFirst",
-      retry: false,
-    },
-  },
-});
+const queryClient = new QueryClient({});
 
 const localStoragePersister = createSyncStoragePersister({
   storage: typeof window !== "undefined" ? window.localStorage : null,
@@ -61,29 +52,23 @@ export default function RootLayout({
         <link rel="icon" href="/filecoin.svg" />
       </head>
       <body>
-        <GeolocationProvider
-          onBlocked={(info: any) => {
-            console.log("blocked", info);
-          }}
-        >
-          <ConfigProvider>
-            <ThemeProvider>
-              <ConfettiProvider>
-                <QueryClientProvider client={queryClient}>
-                  <WagmiProvider config={config}>
-                    <RainbowKitProvider modalSize="compact">
-                      <main className="flex flex-col min-h-screen">
-                        <Navbar />
-                        {children}
-                      </main>
-                      <Footer />
-                    </RainbowKitProvider>
-                  </WagmiProvider>
-                </QueryClientProvider>
-              </ConfettiProvider>
-            </ThemeProvider>
-          </ConfigProvider>
-        </GeolocationProvider>
+        <ConfigProvider>
+          <ThemeProvider>
+            <ConfettiProvider>
+              <QueryClientProvider client={queryClient}>
+                <WagmiProvider config={config}>
+                  <RainbowKitProvider modalSize="compact">
+                    <main className="flex flex-col min-h-screen">
+                      <Navbar />
+                      {children}
+                    </main>
+                    <Footer />
+                  </RainbowKitProvider>
+                </WagmiProvider>
+              </QueryClientProvider>
+            </ConfettiProvider>
+          </ThemeProvider>
+        </ConfigProvider>
       </body>
     </html>
   );

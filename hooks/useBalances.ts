@@ -8,7 +8,7 @@ import * as ERC20 from "@filoz/synapse-core/erc20";
 import * as Payments from "@filoz/synapse-core/pay";
 import { getBalance } from "viem/actions";
 import * as WarmStorage from "@filoz/synapse-core/warm-storage";
-import { usePublicClient } from "wagmi";
+import { useWalletClient } from "wagmi";
 
 /**
  * Custom hook for fetching and managing user wallet balances and storage metrics
@@ -60,13 +60,13 @@ import { usePublicClient } from "wagmi";
  */
 
 export const useBalances = () => {
-  const { address } = useAccount();
+  const { address, chainId } = useAccount();
   // const connectorClient = useConnectorClient({ connector });
-  const client = usePublicClient();
+  const { data: client } = useWalletClient();
   const { config } = useConfig();
   const query = useQuery({
     enabled: !!address,
-    queryKey: ["balances", address, config],
+    queryKey: ["balances", address, config, chainId],
     queryFn: async (): Promise<UseBalancesResponse> => {
       if (!address) throw new Error("Address not found");
       if (!client) throw new Error("Public client not found");

@@ -69,9 +69,9 @@ export const calculateStorageMetrics = async (
       ? availableFunds - amountNeeded
       : 0n;
 
-  const isRateSufficient = operatorApprovals.rateAllowance >= maxUint256
+  const isRateSufficient = operatorApprovals.rateAllowance >= maxUint256 / 2n
 
-  const isLockupSufficient = operatorApprovals.lockupAllowance >= maxUint256;
+  const isLockupSufficient = operatorApprovals.lockupAllowance >= maxUint256 / 2n;
 
   const isSufficient = isRateSufficient && isLockupSufficient && daysLeft >= config.minDaysThreshold;
 

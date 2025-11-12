@@ -13,6 +13,7 @@ import Github from "@/components/ui/icons/Github";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDataSets } from "@filoz/synapse-react";
+import { useQueryClient } from "@tanstack/react-query";
 /** Valid tab identifiers for application navigation */
 type Tab = "manage-storage" | "upload" | "datasets";
 
@@ -51,11 +52,12 @@ const itemVariants = {
  * - /?tab=datasets - Dataset viewer
  */
 export default function Home() {
-  const { isConnected, address } = useAccount();
+  const { isConnected, address, chainId } = useAccount();
   const [activeTab, setActiveTab] = useState<Tab>("manage-storage");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showConfetti } = useConfetti();
+  const queryClient = useQueryClient();
   // Fetch data at top level and distribute via props for centralized loading state
   const { data: balances, isLoading: isLoadingBalances } = useBalances();
   const {
@@ -96,6 +98,14 @@ export default function Home() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  useEffect(() => {
+    if (chainId && !isLoadingDatasets) {
+      queryClient.invalidateQueries({
+        queryKey: ["synapse-warm-storage-data-sets", address],
+      });
+    }
+  }, [chainId]);
 
   return (
     <div className="w-full flex flex-col justify-center min-h-fit">

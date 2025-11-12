@@ -58,9 +58,9 @@ export function StorageCostsModal({ isOpen, onClose }: StorageCostsModalProps) {
               What is an Epoch?
             </p>
             <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-              An <strong>epoch</strong> is Filecoin's block time (30 seconds).
-              Storage costs are calculated per epoch, so you only pay for actual
-              usage time.
+              An <strong>epoch</strong> is Filecoin&apos;s block time (30
+              seconds). Storage costs are calculated per epoch, so you only pay
+              for actual usage time.
             </p>
           </div>
         </div>
@@ -147,7 +147,7 @@ export function StorageCostsModal({ isOpen, onClose }: StorageCostsModalProps) {
                       borderColor: "var(--border)",
                     }}
                   >
-                    $7/TiB
+                    $14/TiB
                   </td>
                   <td
                     className="p-2 border-t"
@@ -156,7 +156,7 @@ export function StorageCostsModal({ isOpen, onClose }: StorageCostsModalProps) {
                       borderColor: "var(--border)",
                     }}
                   >
-                    Per download (1 USDFC ≈ 146 GiB downloads)
+                    1 USDFC top-up ≈ 71.5 GiB of downloads
                   </td>
                 </tr>
                 <tr>
@@ -498,9 +498,9 @@ export function StorageCostsModal({ isOpen, onClose }: StorageCostsModalProps) {
             <li className="flex items-start gap-2">
               <span style={{ color: "var(--primary)" }}>✓</span>
               <span>
-                Don't create lot of small datasets, create a few large datasets
-                instead. This will help you save the minimum pricing per
-                dataset.
+                Don&apos;t create lot of small datasets, create a few large
+                datasets instead. This will help you save the minimum pricing
+                per dataset.
               </span>
             </li>
             <li className="flex items-start gap-2">

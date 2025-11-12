@@ -9,13 +9,13 @@ import { useConfig } from "@/providers/ConfigProvider";
 export const useWithdraw = (ignoreConfetti = false) => {
   const [status, setStatus] = useState<string>("");
   const { triggerConfetti } = useConfetti();
-  const { address } = useAccount();
+  const { address, chainId } = useAccount();
   const wagmiConfig = useWagmiConfig();
   const { config } = useConfig();
   const queryClient = useQueryClient();
   const { data: client } = useWalletClient();
   const mutation = useMutation({
-    mutationKey: ["withdraw", address],
+    mutationKey: ["withdraw", address, chainId],
     mutationFn: async ({ amount }: { amount: bigint }) => {
       if (!client) throw new Error("Wallet client not found");
 
@@ -36,7 +36,7 @@ export const useWithdraw = (ignoreConfetti = false) => {
         triggerConfetti();
       }
       queryClient.invalidateQueries({
-        queryKey: ["balances", address, config],
+        queryKey: ["balances", address, config, chainId],
       });
     },
     onError: (error) => {

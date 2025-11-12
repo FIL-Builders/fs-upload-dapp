@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useConfetti } from "@/hooks/useConfetti";
 import { useAccount } from "wagmi";
 import { usePayment } from "@/hooks/usePayment";
 import { useCreateDataSet } from "@filoz/synapse-react";
 import { PDPProvider } from "@filoz/synapse-core/warm-storage";
 import { CDN_DATA_SET_CREATION_FEE } from "@/utils";
+import { useConfig } from "@/providers/ConfigProvider";
+
 /**
  * Hook for creating new storage datasets on Filecoin.
  * Handles payment processing and dataset creation with progress tracking.
@@ -23,7 +25,9 @@ export const useCreateDataset = () => {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("");
   const { triggerConfetti } = useConfetti();
-  const { address } = useAccount();
+  const { address, chainId } = useAccount();
+  const queryClient = useQueryClient();
+  const { config } = useConfig();
   const { mutation: paymentMutation } = usePayment(true);
   const { mutateAsync: createDataSet } = useCreateDataSet({
     onHash: (hash) => {
@@ -32,7 +36,7 @@ export const useCreateDataset = () => {
     },
   });
   const mutation = useMutation({
-    mutationKey: ["createDataset", address],
+    mutationKey: ["createDataset", address, chainId],
     mutationFn: async ({
       withCDN,
       provider,
@@ -69,6 +73,9 @@ export const useCreateDataset = () => {
       setStatus("🎉 Dataset successfully created!");
       setProgress(100);
       triggerConfetti();
+      queryClient.invalidateQueries({
+        queryKey: ["balances", address, config, chainId],
+      });
     },
     onError: (error) => {
       console.error("Upload failed:", error);

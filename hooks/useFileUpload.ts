@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useConfetti } from "@/hooks/useConfetti";
 import { useAccount, usePublicClient } from "wagmi";
 import { useConfig } from "@/providers/ConfigProvider";
@@ -36,6 +36,7 @@ export const useFileUpload = () => {
   const [uploadedInfo, setUploadedInfo] = useState<UploadedInfo | null>(null);
   const { triggerConfetti } = useConfetti();
   const { address, chainId } = useAccount();
+  const queryClient = useQueryClient();
   const { config } = useConfig();
   const { mutation: paymentMutation } = usePayment(true);
   const client = usePublicClient();
@@ -50,7 +51,7 @@ export const useFileUpload = () => {
     },
   });
   const mutation = useMutation({
-    mutationKey: ["upload", address],
+    mutationKey: ["upload", address, chainId],
     mutationFn: async ({
       file,
       datasetId,
@@ -125,6 +126,9 @@ export const useFileUpload = () => {
       setStatus("🎉 File successfully stored on Filecoin!");
       setProgress(100);
       triggerConfetti();
+      queryClient.invalidateQueries({
+        queryKey: ["balances", address, config, chainId],
+      });
     },
     onError: (error) => {
       console.error("Upload failed:", error);
