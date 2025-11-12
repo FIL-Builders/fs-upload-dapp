@@ -3,25 +3,32 @@ import { createConfig, http } from "wagmi";
 import { connectorsForWallets } from "@rainbow-me/rainbowkit";
 import { injectedWallet, rainbowWallet, metaMaskWallet, rabbyWallet } from "@rainbow-me/rainbowkit/wallets";
 
-export const connectors = connectorsForWallets(
-  [
+// Only initialize connectors on the client side
+const getConnectors = () => {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  return connectorsForWallets(
+    [
+      {
+        groupName: "Recommended",
+        wallets: [metaMaskWallet, injectedWallet],
+      },
+      {
+        groupName: "Popular",
+        wallets: [rainbowWallet, rabbyWallet],
+      },
+    ],
     {
-      groupName: "Recommended",
-      wallets: [metaMaskWallet, injectedWallet],
+      appName: "Filecoin Onchain Cloud dApp",
+      projectId: "filecoin-onchain-cloud-dapp",
     },
-    {
-      groupName: "Popular",
-      wallets: [rainbowWallet, rabbyWallet],
-    },
-  ],
-  {
-    appName: "Filecoin Onchain Cloud dApp",
-    projectId: "filecoin-onchain-cloud-dapp",
-  },
-);
+  );
+};
 
 export const config = createConfig({
-  connectors,
+  connectors: getConnectors(),
   chains: [{ ...filecoinCalibration, name: "Filecoin testnet" }, { ...filecoin, name: "Filecoin" }],
   transports: {
     [filecoin.id]: http(undefined, {
