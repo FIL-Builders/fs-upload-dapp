@@ -1,16 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { ThemeToggle } from "./ThemeToggle";
-import { SettingsModal } from "./SettingsModal";
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { SettingsIcon } from "lucide-react";
 
 export function Navbar() {
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-
   return (
     <motion.nav
       initial={{ y: -100 }}
@@ -34,7 +29,7 @@ export function Navbar() {
             alt="Filecoin"
             width={24}
             height={24}
-            className="w-[30px] h-[30px]  flex-shrink-0"
+            className="w-[30px] h-[30px] shrink-0"
           />
           <h1 className="text-sm sm:text-xl font-bold truncate flex-col items-center text-left lg:flex hidden">
             Filecoin Onchain Cloud dApp
@@ -45,38 +40,19 @@ export function Navbar() {
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.3 }}
-        className="flex items-center gap-2 flex-shrink-0 w-full justify-end"
+        className="flex items-center gap-2 shrink-0 w-full justify-end"
       >
-        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="p-2 rounded-lg transition-colors touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
-            style={{
-              backgroundColor: "transparent",
-              color: "var(--foreground)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "var(--muted)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "transparent";
-            }}
-            aria-label="Open settings"
-          >
-            <SettingsIcon className="w-5 h-5" />
-          </button>
-        </motion.div>
         <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
           <ThemeToggle />
         </motion.div>
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-          <ConnectButton />
+          <ConnectButton
+            showBalance={false}
+            accountStatus="avatar"
+            chainStatus="icon"
+          />
         </motion.div>
       </motion.div>
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-      />
     </motion.nav>
   );
 }

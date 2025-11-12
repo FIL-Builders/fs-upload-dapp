@@ -15,7 +15,7 @@ import { ConfettiProvider } from "@/providers/ConfettiProvider";
 import { ConfigProvider } from "@/providers/ConfigProvider";
 import Footer from "@/components/ui/Footer";
 import { GeolocationProvider } from "@/providers/GeolocationProvider";
-import { wagmiConfig } from "@/services/wagmi";
+import { config } from "@/services/wagmi";
 
 const queryClient = new QueryClient();
 
@@ -50,20 +50,18 @@ export default function RootLayout({
             <ThemeProvider>
               <ConfettiProvider>
                 <QueryClientProvider client={queryClient}>
-                  {wagmiConfig ? (
-                    <WagmiProvider config={wagmiConfig}>
-                      <RainbowKitProvider
-                        modalSize="compact"
-                        initialChain={filecoinCalibration.id}
-                      >
-                        <main className="flex flex-col min-h-screen">
-                          <Navbar />
-                          {children}
-                        </main>
-                        <Footer />
-                      </RainbowKitProvider>
-                    </WagmiProvider>
-                  ) : null}
+                  <WagmiProvider config={config}>
+                    <RainbowKitProvider
+                      modalSize="compact"
+                      initialChain={filecoinCalibration.id}
+                    >
+                      <main className="flex flex-col min-h-screen">
+                        <Navbar />
+                        {children}
+                      </main>
+                      <Footer />
+                    </RainbowKitProvider>
+                  </WagmiProvider>
                 </QueryClientProvider>
               </ConfettiProvider>
             </ThemeProvider>

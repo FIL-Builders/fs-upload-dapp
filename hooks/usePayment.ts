@@ -18,7 +18,7 @@ export const usePayment = (ignoreConfetti = false) => {
   const { config } = useConfig();
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationKey: ["payment", address],
+    mutationKey: ["payment", address, chainId],
     mutationFn: async ({
       depositAmount,
     }: {
@@ -80,7 +80,7 @@ export const usePayment = (ignoreConfetti = false) => {
         triggerConfetti();
       }
       queryClient.invalidateQueries({
-        queryKey: ["balances", address, config],
+        queryKey: ["balances", address, config, chainId],
       });
     },
     onError: (error) => {

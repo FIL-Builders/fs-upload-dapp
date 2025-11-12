@@ -33,13 +33,13 @@ export const useFileUpload = () => {
   const [status, setStatus] = useState("");
   const [uploadedInfo, setUploadedInfo] = useState<UploadedInfo | null>(null);
   const { triggerConfetti } = useConfetti();
-  const { address } = useAccount();
+  const { address, chainId } = useAccount();
   const signer = useEthersSigner();
   const { config } = useConfig();
   const { mutation: paymentMutation } = usePayment(true);
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationKey: ["upload", address],
+    mutationKey: ["upload", address, chainId],
     mutationFn: async ({
       file,
       datasetId,
@@ -146,10 +146,10 @@ export const useFileUpload = () => {
       setProgress(100);
       triggerConfetti();
       queryClient.invalidateQueries({
-        queryKey: ["balances", address, config],
+        queryKey: ["balances", address, config, chainId],
       });
       queryClient.invalidateQueries({
-        queryKey: ["datasets", address],
+        queryKey: ["datasets", address, chainId],
       });
     },
     onError: (error) => {

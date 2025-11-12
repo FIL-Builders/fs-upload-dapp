@@ -16,7 +16,7 @@ import { useConfig } from "@/providers/ConfigProvider";
  * to give users visibility into their storage costs, capacity, and persistence periods.
  */
 export const useBalances = () => {
-  const { address } = useAccount();
+  const { address, chainId } = useAccount();
   const signer = useEthersSigner();
   const { config } = useConfig();
   const query = useQuery({
@@ -25,7 +25,7 @@ export const useBalances = () => {
     enabled: !!address && signer?.address === address,
 
     // Include config in query key to invalidate cache when settings change
-    queryKey: ["balances", address, config],
+    queryKey: ["balances", address, config, chainId],
 
     queryFn: async (): Promise<UseBalancesResponse> => {
       // Early validation to provide clear error messages
