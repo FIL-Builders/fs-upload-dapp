@@ -4,7 +4,6 @@ import { calibration, mainnet } from "@filoz/synapse-sdk";
 import { connectorsForWallets } from "@rainbow-me/rainbowkit";
 import {
   injectedWallet,
-  metaMaskWallet,
   rabbyWallet,
   rainbowWallet,
   walletConnectWallet,
@@ -20,7 +19,7 @@ const getConnectors = () => {
     [
       {
         groupName: "Recommended",
-        wallets: [metaMaskWallet, injectedWallet],
+        wallets: [injectedWallet],
       },
       {
         groupName: "Popular",
