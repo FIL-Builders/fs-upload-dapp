@@ -1,85 +1,50 @@
 # Filecoin Onchain Cloud dApp
 
+A starter kit for building on [Filecoin Onchain Cloud](https://docs.filecoin.cloud/) — upload, manage, and pay for decentralized storage using the [Synapse SDK](https://github.com/FilOzone/synapse-sdk).
 
-This repo will serve with tutorial to demonstrate how to build a decentralized application (dApp) that interacts with Filecoin Synapse - a smart-contract based marketplace for storage and other services in the Filecoin ecosystem.
+## What's Inside
 
-## Overview
+- **Multi-file, multi-copy uploads** with three modes: standard, [Filecoin Beam](https://docs.filecoin.cloud/core-concepts/fwss-overview.md) (CDN addon), and Filecoin Pin (IPFS addon)
+- **Store-pull-commit workflow** — upload once, providers replicate from each other, saving bandwidth
+- **USDFC payments** — deposit, withdraw, and auto-topup with balance sufficiency checks
+- **Session keys** — optional delegated signing for seamless multi-operation workflows
+- **Dashboard** — real-time balances, storage metrics, and per-dataset cost breakdowns
+- **Dataset & file browsing** — inspect pieces, download with CID validation, delete
 
-This dApp showcases:
-- Connecting to Filecoin networks (Mainnet/Calibration)
-- Installing synapse-sdk to your project.
-- Depositing funds to Synapse contracts using USDFC token.
-- Uploading files to Filecoin through Synapse
+## Quick Start
 
-## Prerequisites
-
-- Node.js 18+ and npm
-- A web3 wallet (like MetaMask)
-- Basic understanding of React and TypeScript
-- Get some tFIL tokens on Filecoin Calibration testnet [link to faucet](https://faucet.calibnet.chainsafe-fil.io/funds.html)
-- Get some USDFC tokens on Filecoin Calibration testnet [link to faucet](https://forest-explorer.chainsafe.dev/faucet/calibnet_usdfc)
-
-## Getting Started
-
-1. Clone this repository:
 ```bash
-git clone https://github.com/yourusername/fs-upload-app
-cd fs-upload-app
+git clone https://github.com/FIL-Builders/fs-upload-dapp
+cd fs-upload-dapp
+pnpm install
+pnpm dev
 ```
 
-2. Install dependencies:
-```bash
-npm install
-```
+Open [http://localhost:3000](http://localhost:3000). You'll need a web3 wallet with testnet tokens — the app includes a built-in faucet under the wallet menu's **Add Funds** option in the navbar, or use these directly:
 
-3. Run the development server:
-```bash
-npm run dev
-```
+- **tFIL** — [Calibration Faucet](https://faucet.calibnet.chainsafe-fil.io/funds.html)
+- **tUSDFC** — [ChainSafe Faucet](https://forest-explorer.chainsafe.dev/faucet/calibnet_usdfc) (limit $5/request)
 
-Open [http://localhost:3000](http://localhost:3000) to view the dApp.
+For a detailed code walkthrough of every workflow, see [tutorial.md](tutorial.md).
 
-## Key Components
+## Documentation
 
-### Wallet Connection
-The dApp uses RainbowKit for seamless wallet connection, configured specifically for Filecoin networks:
-- Filecoin Mainnet
-- Filecoin Calibration (testnet)
+| Resource | Description |
+| -------- | ----------- |
+| [tutorial.md](tutorial.md) | Code walkthrough of every workflow in this dApp |
+| [AGENTS.md](AGENTS.md) | Agent-optimized codebase reference (architecture, file map, all APIs) |
+| [Filecoin Onchain Cloud Docs](https://docs.filecoin.cloud/) | Core concepts, developer guides, API reference |
+| [Synapse SDK](https://github.com/FilOzone/synapse-sdk) | SDK source and examples |
+| [USDFC Docs](https://docs.secured.finance/usdfc-stablecoin/getting-started) | Stablecoin used for storage payments |
 
-### Query token and storage usage Balances
-Shows how to:
-- Get user FIL-USDFC-SynapseStorageUsage balances
-- hook used to query user balances [link](https://github.com/FIL-Builders/fs-upload-dapp/blob/main/hooks/useBalances.ts)
+## Stack
 
-### Pay For Storage with USDFC
-Demonstrates how to:
-- Pay for storage by depositing funds to Synapse contracts using USDFC token
-- Handles one time payment for 10GB usage that persists 30days
-- Notifies repayment if less than 10days remain for paying synapse based on current usage
-- hook used to conduct a payment [link](https://github.com/FIL-Builders/fs-upload-dapp/blob/main/hooks/usePayment.ts)
-
-### File Upload
-Shows how to:
-- Create a user-friendly file upload interface
-- Upload file to Filecoin using synapse-sdk
-- Monitor upload status
-- Download filecoin from Filecoin using synapse-sdk
-- hook used to upload a file [link](https://github.com/FIL-Builders/fs-upload-dapp/blob/main/hooks/useFileUpload.ts)
-
-## Learn More
-
-- [Filecoin synapse-sdk](https://github.com/FilOzone/synapse-sdk)
-- [USDFC Token Documentation](https://docs.secured.finance/usdfc-stablecoin/getting-started)
-- [Wagmi Documentation](https://wagmi.sh)
-- [RainbowKit Documentation](https://www.rainbowkit.com)
-- Best practices in React!
-  - [Tanstack Queries](https://tanstack.com/query/latest/docs/framework/react/guides/queries)
-  - [Tanstack Mutations](https://tanstack.com/query/latest/docs/framework/react/guides/mutations)
+Next.js 16 (static export) · React 19 · TypeScript 5 · Tailwind CSS 4 · shadcn/ui · Wagmi 3 · RainbowKit · TanStack Query · Zustand
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions welcome — feel free to open a PR.
 
 ## License
 
-This project is licensed under the MIT License.
+MIT
