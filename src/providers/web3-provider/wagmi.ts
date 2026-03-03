@@ -11,6 +11,12 @@ import {
 } from "@rainbow-me/rainbowkit/wallets";
 import { createConfig, http } from "wagmi";
 
+// Obtain a real project ID at https://cloud.walletconnect.com and set it in
+// .env.local as NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID to enable WalletConnect,
+// Rainbow, and Rabby. MetaMask works without it.
+const projectId =
+  process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || "filecoin-onchain-cloud-dapp";
+
 const getConnectors = () => {
   if (typeof window === "undefined") {
     return [];
@@ -29,7 +35,7 @@ const getConnectors = () => {
     ],
     {
       appName: "Filecoin Onchain Cloud",
-      projectId: "filecoin-onchain-cloud-dapp",
+      projectId,
     },
   );
 };

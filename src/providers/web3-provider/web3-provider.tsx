@@ -5,7 +5,7 @@ import { darkTheme, lightTheme, RainbowKitProvider } from "@rainbow-me/rainbowki
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { persistQueryClient } from "@tanstack/react-query-persist-client";
-import { useTheme } from "next-themes";
+import { ThemeProvider, useTheme } from "next-themes";
 import { deserialize, serialize, WagmiProvider } from "wagmi";
 import "@rainbow-me/rainbowkit/styles.css";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
@@ -55,18 +55,20 @@ function RainbowKitProviderWrapper({ children }: { children: React.ReactNode }) 
 
 export function Web3Provider({ children }: { children: React.ReactNode }) {
   return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <StorageConfigProvider>
-          <SessionProvider>
-            <WalletProvider>
-              {isDevelopment && <ReactQueryDevtools initialIsOpen={false} />}
-              <RainbowKitProviderWrapper>{children}</RainbowKitProviderWrapper>
-            </WalletProvider>
-          </SessionProvider>
-        </StorageConfigProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <WagmiProvider config={wagmiConfig}>
+        <QueryClientProvider client={queryClient}>
+          <StorageConfigProvider>
+            <SessionProvider>
+              <WalletProvider>
+                {isDevelopment && <ReactQueryDevtools initialIsOpen={false} />}
+                <RainbowKitProviderWrapper>{children}</RainbowKitProviderWrapper>
+              </WalletProvider>
+            </SessionProvider>
+          </StorageConfigProvider>
+        </QueryClientProvider>
+      </WagmiProvider>
+    </ThemeProvider>
   );
 }
 
