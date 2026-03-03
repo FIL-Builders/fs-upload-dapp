@@ -11,7 +11,7 @@ function ensureSession(): Promise<void> {
 
   useSessionStore.getState().openModal();
 
-  return new Promise((resolve) => {
+  return new Promise<void>((resolve) => {
     const unsub = useSessionStore.subscribe((state, prev) => {
       if (getSessionData()) {
         unsub();

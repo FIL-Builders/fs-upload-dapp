@@ -57,7 +57,10 @@ export function formatFutureDuration(days: number): string {
   return `in ${days} days`;
 }
 
-export function getDaysVariant(daysLeft: number, threshold: number): "success" | "warning" | "danger" {
+export function getDaysVariant(
+  daysLeft: number,
+  threshold: number,
+): "success" | "warning" | "danger" {
   if (daysLeft === Infinity) return "success";
   if (daysLeft < threshold) return "danger";
   if (daysLeft < threshold * 2) return "warning";

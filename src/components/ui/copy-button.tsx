@@ -32,7 +32,10 @@ export function CopyButton({
       {showTooltip ? (
         <Tooltip>
           <TooltipTrigger asChild>
-            <button onClick={handleCopy} className="font-mono text-sm hover:underline cursor-pointer">
+            <button
+              onClick={handleCopy}
+              className="font-mono text-sm hover:underline cursor-pointer"
+            >
               {display}
             </button>
           </TooltipTrigger>
@@ -46,7 +49,11 @@ export function CopyButton({
         </button>
       )}
       <Button variant="ghost" size="icon" className={buttonSize} onClick={handleCopy}>
-        {copied ? <Check className={`${iconSize} text-green-500`} /> : <Copy className={iconSize} />}
+        {copied ? (
+          <Check className={`${iconSize} text-green-500`} />
+        ) : (
+          <Copy className={iconSize} />
+        )}
       </Button>
     </div>
   );

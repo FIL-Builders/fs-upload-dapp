@@ -35,11 +35,14 @@ export function DatasetCard({ dataset }: DatasetCardProps) {
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
-            <CardTitle
-              className="text-lg flex items-center gap-2 cursor-pointer"
-              onClick={() => router.push(`/datasets?id=${dataset.dataSetId.toString()}`)}
-            >
-              Dataset #{dataset.dataSetId.toString()}
+            <CardTitle className="text-lg flex items-center gap-2">
+              <button
+                type="button"
+                className="cursor-pointer hover:underline"
+                onClick={() => router.push(`/datasets?id=${dataset.dataSetId.toString()}`)}
+              >
+                Dataset #{dataset.dataSetId.toString()}
+              </button>
               {dataset.cdn && <Badge variant="secondary">CDN</Badge>}
               {isOnIpfs && <Badge variant="secondary">IPFS</Badge>}
             </CardTitle>
@@ -83,7 +86,11 @@ export function DatasetCard({ dataset }: DatasetCardProps) {
               <TableBody>
                 {dataset.pieces.map((piece, index) => {
                   return (
-                    <PieceRow key={`${index}-${piece.id.toString()}`} piece={piece} dataSet={dataset} />
+                    <PieceRow
+                      key={`${index}-${piece.id.toString()}`}
+                      piece={piece}
+                      dataSet={dataset}
+                    />
                   );
                 })}
               </TableBody>

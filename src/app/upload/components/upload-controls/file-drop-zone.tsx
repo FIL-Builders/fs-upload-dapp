@@ -92,7 +92,11 @@ async function processDroppedItems(dataTransfer: DataTransfer): Promise<File[]> 
   return files;
 }
 
-export function FileDropZone({ onFilesSelected, disabled, allowFolders = true }: FileDropZoneProps) {
+export function FileDropZone({
+  onFilesSelected,
+  disabled,
+  allowFolders = true,
+}: FileDropZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);

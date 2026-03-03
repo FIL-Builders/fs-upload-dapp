@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDaysDisplay, getDaysVariant } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { useStorageOverview } from "@/hooks/use-storage-overview";
 import { useStorageConfig, useStorageConfigStore } from "@/providers/storage-config";
 import { DepositForm } from "@/components/pay/deposit";
@@ -144,9 +145,17 @@ export function StorageDashboard() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <CollapsibleTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-9 w-9">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9"
+                        aria-label={detailsOpen ? "Hide details" : "Show details"}
+                      >
                         <ChevronDown
-                          className={`h-5 w-5 transition-transform ${detailsOpen ? "rotate-180" : ""}`}
+                          className={cn(
+                            "h-5 w-5 transition-transform",
+                            detailsOpen && "rotate-180",
+                          )}
                         />
                       </Button>
                     </CollapsibleTrigger>
@@ -177,7 +186,9 @@ export function StorageDashboard() {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground flex items-center gap-1.5">
                     Burn Rate (Current vs Max)
-                    {metrics.isRateExceeded && <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />}
+                    {metrics.isRateExceeded && (
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                    )}
                   </span>
                   <span
                     className={`font-medium ${metrics.isRateExceeded ? "text-amber-600 dark:text-amber-400" : ""}`}

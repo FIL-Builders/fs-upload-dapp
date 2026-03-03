@@ -39,7 +39,8 @@ export function CostBreakdownModal({ open, onOpenChange }: CostBreakdownModalPro
   const efficiencyMetrics = useMemo(() => {
     const totalPaidCapacity = datasetCosts.reduce((sum, d) => sum + d.paidCapacityGiB, 0);
     const totalActualUsage = datasetCosts.reduce((sum, d) => sum + d.sizeGiB, 0);
-    const efficiencyPercent = totalPaidCapacity > 0 ? (totalActualUsage / totalPaidCapacity) * 100 : 100;
+    const efficiencyPercent =
+      totalPaidCapacity > 0 ? (totalActualUsage / totalPaidCapacity) * 100 : 100;
     const totalRemainingFree = datasetCosts.reduce((sum, d) => sum + d.remainingFreeCapacityGiB, 0);
 
     return {
@@ -130,8 +131,8 @@ export function CostBreakdownModal({ open, onOpenChange }: CostBreakdownModalPro
                           )}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {dataset.sizeGiB.toFixed(2)} GiB &middot; {dataset.pieceCount} files &middot;{" "}
-                          {dataset.providerName}
+                          {dataset.sizeGiB.toFixed(2)} GiB &middot; {dataset.pieceCount} files
+                          &middot; {dataset.providerName}
                         </div>
                       </div>
                       <div className="text-right ml-4">
@@ -147,7 +148,10 @@ export function CostBreakdownModal({ open, onOpenChange }: CostBreakdownModalPro
                           <span>Capacity utilization</span>
                           <span>{dataset.utilizationPercent.toFixed(2)}%</span>
                         </div>
-                        <Progress value={Math.min(dataset.utilizationPercent, 100)} className="h-1.5" />
+                        <Progress
+                          value={Math.min(dataset.utilizationPercent, 100)}
+                          className="h-1.5"
+                        />
                         <p className="text-xs text-muted-foreground mt-1">
                           {formatCapacity(dataset.remainingFreeCapacityGiB)} free capacity remaining
                         </p>

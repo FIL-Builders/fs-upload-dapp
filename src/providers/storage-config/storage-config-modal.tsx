@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ArrowRight, CheckCircle2, CreditCard, RotateCcw, Settings } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  CreditCard,
+  RotateCcw,
+  Settings,
+} from "lucide-react";
 import { toast } from "sonner";
 import { computeConfigCostPreview } from "@/lib/storage-metrics";
 import { useStorageOverview } from "@/hooks/use-storage-overview";
@@ -96,8 +103,8 @@ export function StorageConfigModal() {
             Storage Configuration
           </DialogTitle>
           <DialogDescription>
-            Configure your storage capacity and alert preferences. These settings are saved per wallet
-            and network.
+            Configure your storage capacity and alert preferences. These settings are saved per
+            wallet and network.
           </DialogDescription>
         </DialogHeader>
 

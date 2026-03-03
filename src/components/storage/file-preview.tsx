@@ -34,7 +34,10 @@ export function FilePreview({
         className={`rounded-md bg-muted flex items-center justify-center ${className}`}
         style={{ width: size, height: size }}
       >
-        <FileIcon className="text-muted-foreground" style={{ width: size * 0.5, height: size * 0.5 }} />
+        <FileIcon
+          className="text-muted-foreground"
+          style={{ width: size * 0.5, height: size * 0.5 }}
+        />
       </div>
     );
   }

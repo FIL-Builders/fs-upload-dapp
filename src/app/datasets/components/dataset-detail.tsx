@@ -7,7 +7,8 @@ import { ArrowLeft, Database, RefreshCw, Trash2, Upload } from "lucide-react";
 import { useConnection } from "wagmi";
 import { transformDatasets } from "@/lib/datasets";
 import { pluralize } from "@/lib/format";
-import { formatSizeMessage, isDatasetOnIpfs } from "@/lib/piece";
+import { formatSizeMessage, getPdpScannerUrl, isDatasetOnIpfs } from "@/lib/piece";
+import { cn } from "@/lib/utils";
 import { useDeleteDataset } from "@/hooks/use-delete";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -69,26 +70,51 @@ export function DatasetDetailContent({ datasetId }: { datasetId: string }) {
         Back to Datasets
       </Link>
 
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-            Dataset #{datasetId}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight">Dataset #{datasetId}</h1>
             {dataset.cdn && <Badge variant="secondary">CDN</Badge>}
             {isOnIpfs && <Badge variant="secondary">IPFS</Badge>}
-          </h1>
-          <p className="text-muted-foreground mt-1">
+          </div>
+          <p className="text-sm text-muted-foreground">
             {dataset.pieces.length} {pluralize(dataset.pieces.length, "piece")} ·{" "}
             {formatSizeMessage(dataset.totalSize)}
           </p>
-          <div>
-            <div>{`Stored by ${dataset.provider.name}`}</div>
-            <div>{`Provider url: ${dataset.serviceURL}`}</div>
-            <div>{`PDP Scan link: https://pdp.vxb.ai/calibration/dataset/${dataset.dataSetId}`}</div>
-          </div>
+          <dl className="text-sm text-muted-foreground space-y-0.5">
+            <div className="flex gap-1.5">
+              <dt className="font-medium text-foreground">Provider:</dt>
+              <dd>{dataset.provider.name}</dd>
+            </div>
+            <div className="flex gap-1.5">
+              <dt className="font-medium text-foreground">Service URL:</dt>
+              <dd className="truncate max-w-xs">{dataset.serviceURL}</dd>
+            </div>
+            <div className="flex gap-1.5">
+              <dt className="font-medium text-foreground">PDP Scan:</dt>
+              <dd>
+                <a
+                  href={getPdpScannerUrl(dataset.dataSetId, chainId)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  View on PDP Scanner
+                </a>
+              </dd>
+            </div>
+          </dl>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="icon" onClick={() => refetch()} disabled={isRefetching}>
-            <RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin" : ""}`} />
+        <div className="flex gap-2 shrink-0">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => refetch()}
+            disabled={isRefetching}
+            aria-busy={isRefetching}
+            aria-label="Refresh dataset"
+          >
+            <RefreshCw className={cn("h-4 w-4", isRefetching && "animate-spin")} />
           </Button>
           <ConfirmDeleteDialog
             open={deleteDialogOpen}

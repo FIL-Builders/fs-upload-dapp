@@ -119,7 +119,9 @@ export function useUploadPhase() {
   const skip = (stepId: StepId) =>
     setPhase((p) =>
       withActive(p, (a) => {
-        const steps = a.steps.map((s) => (s.id === stepId ? { ...s, status: "skipped" as const } : s));
+        const steps = a.steps.map((s) =>
+          s.id === stepId ? { ...s, status: "skipped" as const } : s,
+        );
         return { ...a, steps, progress: calculateProgress(steps, a.providers) };
       }),
     );
@@ -138,7 +140,9 @@ export function useUploadPhase() {
         ...a,
         providers: Array.from({ length: count }, (_, i) => ({
           label: `Provider ${i + 1}`,
-          steps: (i === 0 ? PRIMARY_PROVIDER_STEPS : SECONDARY_PROVIDER_STEPS).map((t) => toStep(t)),
+          steps: (i === 0 ? PRIMARY_PROVIDER_STEPS : SECONDARY_PROVIDER_STEPS).map((t) =>
+            toStep(t),
+          ),
         })),
       })),
     );

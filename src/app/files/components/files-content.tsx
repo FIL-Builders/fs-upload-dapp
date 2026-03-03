@@ -43,7 +43,7 @@ export function FilesContent() {
         }
       />
 
-      {pieces && pieces.length > 0 ? (
+      {pieces.length > 0 ? (
         <Card>
           <CardContent>
             <Table>

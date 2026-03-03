@@ -198,9 +198,9 @@ Supports multi-file, multi-copy uploads. Three modes:
 
 | Mode       | Hook                | Description                                           |
 | ---------- | ------------------- | ----------------------------------------------------- |
-| `standard` | `useUpload`         | Filecoin Beam datasets on storage providers           |
-| `cdn`      | `useUpload`         | CDN-enabled providers for fast retrieval              |
-| `pin`      | `useFilecoinPinUpload` | CAR file → IPFS indexing → public IPFS gateway access |
+| `standard` | `useUpload`            | Store files on Filecoin storage providers                          |
+| `cdn`      | `useUpload`            | Standard + Filecoin Beam (CDN service addon) for fast retrieval    |
+| `pin`      | `useFilecoinPinUpload` | Standard + Filecoin Pin (IPFS service addon) — CAR file, IPFS gateway access |
 
 ### Upload Flow (standard/CDN)
 

@@ -11,7 +11,12 @@ interface UploadFeedbackPanelProps {
   onReset: () => void;
 }
 
-export function UploadFeedbackPanel({ phase, fileCount, copies, onReset }: UploadFeedbackPanelProps) {
+export function UploadFeedbackPanel({
+  phase,
+  fileCount,
+  copies,
+  onReset,
+}: UploadFeedbackPanelProps) {
   if (phase.phase === "idle") {
     return null;
   }
@@ -20,5 +25,7 @@ export function UploadFeedbackPanel({ phase, fileCount, copies, onReset }: Uploa
     return <UploadResults result={phase.result} onReset={onReset} />;
   }
 
-  return <UploadStatusPanel phase={phase} fileCount={fileCount} copies={copies} onRetry={onReset} />;
+  return (
+    <UploadStatusPanel phase={phase} fileCount={fileCount} copies={copies} onRetry={onReset} />
+  );
 }

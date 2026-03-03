@@ -70,7 +70,8 @@ export function DepositForm() {
         <div className="flex justify-between mb-4">
           <span className="text-sm text-muted-foreground">Suggested Deposit</span>
           <span className="font-semibold">
-            {parseFloat(depositNeeded).toLocaleString(undefined, { maximumFractionDigits: 4 })} USDFC
+            {parseFloat(depositNeeded).toLocaleString(undefined, { maximumFractionDigits: 4 })}{" "}
+            USDFC
           </span>
         </div>
       )}

@@ -163,9 +163,9 @@ The upload system supports **multi-file, multi-copy** uploads across three modes
 
 | Mode         | Description                                                      | Hook                   |
 | ------------ | ---------------------------------------------------------------- | ---------------------- |
-| **Standard** | Store files on Filecoin storage providers (Filecoin Beam datasets) | `useUpload`            |
-| **CDN**      | Store with CDN-enabled providers for fast retrieval               | `useUpload`            |
-| **Pin**      | Build a CAR file and pin to IPFS, producing a root CID            | `useFilecoinPinUpload` |
+| **Standard** | Store files on Filecoin storage providers                                        | `useUpload`            |
+| **CDN**      | Standard + Filecoin Beam (CDN service addon) for fast retrieval                  | `useUpload`            |
+| **Pin**      | Standard + Filecoin Pin (IPFS service addon) — builds a CAR file, produces a root CID | `useFilecoinPinUpload` |
 
 ### How it Works
 
@@ -177,7 +177,7 @@ The [`useUpload`](src/app/upload/hooks/use-upload.ts) hook orchestrates the full
 
 3. 💰 **Balance & Cost Check**: Calls [`fetchStorageMetrics`](src/lib/storage-metrics.ts) with `totalSize * copies` to determine if the user's balance can cover the upload. This accounts for:
    - The minimum rate of ~$0.06/month per dataset (on-chain `minimumPricePerMonth`)
-   - 1 USDFC auto-topup of Filecoin Beam credits on CDN dataset creation
+   - 1 USDFC auto-topup of Filecoin Beam credits on dataset creation with CDN addon
    - Rate and lockup allowance approvals
 
    If the balance is insufficient, it automatically triggers a `depositAndApprove()` with the exact shortfall — the user doesn't need to manually calculate and deposit.

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "@/globals.css";
 import { Web3Provider } from "@/providers";
-import { Footer, Navbar, WalletGuard } from "@/components/layout";
+import { ErrorBoundary, Footer, Navbar, WalletGuard } from "@/components/layout";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -45,7 +45,9 @@ export default function RootLayout({
           <TooltipProvider>
             <Navbar />
             <main className="flex-1 min-h-[calc(100vh-150px)] max-w-screen-2xl mx-auto w-full">
-              <WalletGuard>{children}</WalletGuard>
+              <ErrorBoundary>
+                <WalletGuard>{children}</WalletGuard>
+              </ErrorBoundary>
             </main>
             <Footer />
             <Toaster richColors position="bottom-right" />

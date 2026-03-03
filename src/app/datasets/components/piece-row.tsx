@@ -1,7 +1,12 @@
 "use client";
 
 import { DataSet, Piece } from "@/lib/datasets";
-import { formatSizeMessage, isIpfsIndexed, normalizePieceCid, type OpenPieceParams } from "@/lib/piece";
+import {
+  formatSizeMessage,
+  isIpfsIndexed,
+  normalizePieceCid,
+  type OpenPieceParams,
+} from "@/lib/piece";
 import { PieceActions } from "@/components/storage";
 import { FilePreview } from "@/components/storage/file-preview";
 import { CopyButton } from "@/components/ui/copy-button";

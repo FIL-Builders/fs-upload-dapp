@@ -2,7 +2,11 @@ import type { PieceWithMetadata } from "@filoz/synapse-core/warm-storage";
 import { DataSetWithPieces, UseServicePriceResult } from "@filoz/synapse-react";
 import type { PDPProvider } from "@filoz/synapse-sdk";
 import { getPieceInfoFromCid, normalizePieceCid, type SizeInfo } from "@/lib/piece";
-import { bytesToGiB, calculateMinimumCapacityThreshold, computeMonthlyStorageCost } from "./decimal";
+import {
+  bytesToGiB,
+  calculateMinimumCapacityThreshold,
+  computeMonthlyStorageCost,
+} from "./decimal";
 import { DECIMAL_PLACES } from "./format";
 
 export interface Piece extends PieceWithMetadata, SizeInfo {}

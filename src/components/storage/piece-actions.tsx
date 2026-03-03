@@ -48,7 +48,9 @@ export function PieceActions({ piece, pieceCid, accessParams, dataSetId }: Piece
       : null;
 
   const ipfsUrl =
-    hasIPFS && accessParams.ipfsRootCid ? `${config.ipfsGatewayUrl}${accessParams.ipfsRootCid}` : null;
+    hasIPFS && accessParams.ipfsRootCid
+      ? `${config.ipfsGatewayUrl}${accessParams.ipfsRootCid}`
+      : null;
 
   const spUrl = hasSP ? `${accessParams.serviceURL}/piece/${pieceCid}` : null;
 
@@ -58,7 +60,11 @@ export function PieceActions({ piece, pieceCid, accessParams, dataSetId }: Piece
 
   return (
     <div className="flex justify-end gap-1">
-      <PiecePreviewModal piece={piece} accessParams={accessParams} dataSetId={dataSetId.toString()} />
+      <PiecePreviewModal
+        piece={piece}
+        accessParams={accessParams}
+        dataSetId={dataSetId.toString()}
+      />
 
       {/* CDN Access (Filbeam) */}
       {cdnUrl && (

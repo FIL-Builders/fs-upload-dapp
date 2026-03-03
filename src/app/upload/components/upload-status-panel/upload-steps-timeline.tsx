@@ -44,14 +44,24 @@ function StepRow({ step }: { step: UploadStep }) {
             step.status === "active" && "animate-spin",
           )}
         />
-        <span className={cn("text-xs font-medium", getStatusTextClass(step.status))}>{step.label}</span>
-        <Badge variant="outline" className={cn("ml-auto capitalize", getStatusBadgeClass(step.status))}>
+        <span className={cn("text-xs font-medium", getStatusTextClass(step.status))}>
+          {step.label}
+        </span>
+        <Badge
+          variant="outline"
+          className={cn("ml-auto capitalize", getStatusBadgeClass(step.status))}
+        >
           {step.status}
         </Badge>
       </div>
 
       {message && (
-        <div className={cn("pl-5 pt-1 text-xs", isError ? "text-destructive" : "text-muted-foreground")}>
+        <div
+          className={cn(
+            "pl-5 pt-1 text-xs",
+            isError ? "text-destructive" : "text-muted-foreground",
+          )}
+        >
           {isLongMessage ? (
             <Tooltip>
               <TooltipTrigger asChild>

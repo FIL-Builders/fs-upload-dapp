@@ -80,10 +80,11 @@ async function loginSession(
 async function revokeSession(walletClient: WalletClient, chainId: number) {
   const sessionKey = getSessionKey(walletClient, chainId);
   if (!sessionKey) throw new Error("Session key not found");
-  const revokeTx = await SessionKey.revoke(walletClient as Parameters<typeof SessionKey.revoke>[0], {
+  const client = walletClient as Parameters<typeof SessionKey.revoke>[0];
+  const revokeTx = await SessionKey.revoke(client, {
     address: sessionKey.address,
   });
-  await waitForTransactionReceipt(walletClient, { hash: revokeTx });
+  await waitForTransactionReceipt(client, { hash: revokeTx });
 }
 
 async function validateSession(walletClient: WalletClient, address: string, chainId: number) {
@@ -212,6 +213,8 @@ export function useRevokeSession() {
     onSuccess: () => {
       toast.success("Session revoked", { id: "session" });
       queryClient.invalidateQueries({ queryKey: queryKeys.session(address, chainId) });
+      queryClient.invalidateQueries({ queryKey: ["balances", address] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.datasets(address, chainId) });
     },
   });
 }

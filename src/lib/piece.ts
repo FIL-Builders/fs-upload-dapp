@@ -65,7 +65,8 @@ export const isIpfsIndexed = (metadata: Record<string, string> | undefined): boo
 export const isDatasetOnIpfs = (dataset: {
   metadata: Record<string, string>;
   pieces: { metadata?: Record<string, string> }[];
-}): boolean => isIpfsIndexed(dataset.metadata) && dataset.pieces.some((p) => p.metadata?.ipfsRootCid);
+}): boolean =>
+  isIpfsIndexed(dataset.metadata) && dataset.pieces.some((p) => p.metadata?.ipfsRootCid);
 
 // ─── Access params ──────────────────────────────────────────────────────────
 
@@ -81,18 +82,25 @@ export interface OpenPieceParams {
 
 const FILECOIN_MAINNET_CHAIN_ID = 314;
 
-function resolveCdnNetwork(chainId?: number): string {
+function resolveNetwork(chainId?: number): string {
   return chainId === FILECOIN_MAINNET_CHAIN_ID ? "mainnet" : "calibration";
 }
 
-export function buildPieceUrl(params: OpenPieceParams & { address: string; chainId?: number }): string {
+export function getPdpScannerUrl(dataSetId: bigint | string, chainId?: number): string {
+  const network = resolveNetwork(chainId);
+  return `https://pdp.vxb.ai/${network}/dataset/${dataSetId}`;
+}
+
+export function buildPieceUrl(
+  params: OpenPieceParams & { address: string; chainId?: number },
+): string {
   const { pieceCid, isCDN, address, serviceURL, withIPFSIndexing, ipfsRootCid, chainId } = params;
 
   if (withIPFSIndexing && ipfsRootCid) {
     return `${config.ipfsGatewayUrl}${ipfsRootCid}`;
   }
   if (isCDN) {
-    const network = resolveCdnNetwork(chainId);
+    const network = resolveNetwork(chainId);
     return `https://${address}.${network}.filbeam.io/${pieceCid}`;
   }
   return `${serviceURL}/piece/${pieceCid}`;

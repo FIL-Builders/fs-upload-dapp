@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ProviderProgress, UploadStep } from "@/app/upload/types";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,10 @@ interface UploadProvidersListProps {
 export function UploadProvidersList({ providers }: UploadProvidersListProps) {
   const [isOpen, setIsOpen] = useState(providers.length <= 4);
   const shouldScroll = providers.length > 4;
+
+  useEffect(() => {
+    setIsOpen(providers.length <= 4);
+  }, [providers.length]);
 
   if (providers.length === 0) {
     return null;
@@ -71,7 +75,9 @@ function ProviderRow({ provider, index }: { provider: ProviderProgress; index: n
   return (
     <div className={cn("rounded-md border px-3 py-2", getStatusPanelClass(overallStatus))}>
       <div className="flex items-center gap-2">
-        <Icon className={cn("h-3.5 w-3.5 shrink-0", overallStatus === "active" && "animate-spin")} />
+        <Icon
+          className={cn("h-3.5 w-3.5 shrink-0", overallStatus === "active" && "animate-spin")}
+        />
         <span className="text-xs font-medium">{getProviderLabel(provider, index)}</span>
         <Badge
           variant="outline"

@@ -105,7 +105,7 @@ export function PiecePreviewModal({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={previewUrl}
-                    alt={filename}
+                    alt={filename ?? "File preview"}
                     className={`w-48 h-48 rounded-lg object-cover ${imageLoading ? "opacity-0" : "opacity-100"}`}
                     onLoad={() => setImageLoading(false)}
                     onError={() => {

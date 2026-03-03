@@ -68,9 +68,7 @@ interface WalletGuardProps {
 export function WalletGuard({ children }: WalletGuardProps) {
   const isMounted = useIsMounted();
 
-  if (isMounted) {
-    return <ConnectWalletScreen>{children}</ConnectWalletScreen>;
-  }
+  if (!isMounted) return null;
 
-  return <>{children}</>;
+  return <ConnectWalletScreen>{children}</ConnectWalletScreen>;
 }

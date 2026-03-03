@@ -1,3 +1,4 @@
+export { ErrorBoundary } from "./error-boundary";
 export { ExplorerLink } from "./explorer-link";
 export { Footer } from "./footer";
 export { Usdfc, Filecoin } from "./icons";

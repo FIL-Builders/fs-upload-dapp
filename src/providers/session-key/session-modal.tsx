@@ -49,7 +49,8 @@ export function SessionModal() {
 
   const isExtendMode = status === "expiring";
   const now = useMemo(() => BigInt(Math.floor(Date.now() / 1000)), []);
-  const isActiveView = !showSuccess && status === "valid" && expiresAt !== undefined && expiresAt > now;
+  const isActiveView =
+    !showSuccess && status === "valid" && expiresAt !== undefined && expiresAt > now;
   const isFormView = !showSuccess && !isActiveView;
 
   const handleCreate = () => {

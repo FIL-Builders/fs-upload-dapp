@@ -37,7 +37,9 @@ export const fetchStorageMetrics = async (
     withCDN: boolean;
   },
 ) => {
-  const bytesToStore = fileSize ? fileSize : Number(BigInt(config.storageCapacity) * SIZE_CONSTANTS.GiB);
+  const bytesToStore = fileSize
+    ? fileSize
+    : Number(BigInt(config.storageCapacity) * SIZE_CONSTANTS.GiB);
 
   const count = newDatasets?.count ?? 0;
   const withCDN = newDatasets?.withCDN ?? false;
@@ -54,7 +56,9 @@ export const fetchStorageMetrics = async (
 
   const availableFunds = toDecimal(accountInfo.availableFunds);
 
-  const perMonth = toDecimal(prices.pricePerTiBPerMonthNoCDN).mul(bytesToStore).div(SIZE_CONSTANTS.TiB);
+  const perMonth = toDecimal(prices.pricePerTiBPerMonthNoCDN)
+    .mul(bytesToStore)
+    .div(SIZE_CONSTANTS.TiB);
 
   const perDay = perMonth.div(TIME_CONSTANTS.DAYS_PER_MONTH);
 
@@ -131,7 +135,9 @@ export function computeDashboardMetrics(
   const burnRatePercent = maxMonthlyRate > 0 ? (monthlyRate / maxMonthlyRate) * 100 : 0;
   const isRateExceeded = monthlyRate > maxMonthlyRate && maxMonthlyRate > 0;
 
-  const pricePerTiB = pricing ? bigIntToDecimal(pricing.pricePerTiBPerMonthNoCDN, 18).toNumber() : 0;
+  const pricePerTiB = pricing
+    ? bigIntToDecimal(pricing.pricePerTiBPerMonthNoCDN, 18).toNumber()
+    : 0;
   const matchingCapacityGiB = computeRequiredCapacity(monthlyRate, pricePerTiB);
   const minFeeCapacityGiB = pricing
     ? calculateMinimumCapacityThreshold(
@@ -181,7 +187,8 @@ export function computeConfigCostPreview(
   const totalCost = perMonth.times(new AppDecimal(periodDays).div(30));
 
   const perDayNum = perDay.toNumber();
-  const coverageDays = storageBalance > 0 && perDayNum > 0 ? Math.floor(storageBalance / perDayNum) : 0;
+  const coverageDays =
+    storageBalance > 0 && perDayNum > 0 ? Math.floor(storageBalance / perDayNum) : 0;
   const depositNeeded = Math.max(0, perDay.times(warningThresholdDays).toNumber() - storageBalance);
 
   return {

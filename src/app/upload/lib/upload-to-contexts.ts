@@ -5,7 +5,7 @@ import type { StorageContext } from "@filoz/synapse-sdk/storage";
 type UploadableFile = {
   name: string;
   size: number;
-  stream: () => ReadableStream;
+  stream: () => ReadableStream<Uint8Array>;
 };
 
 type ProviderPhaseUpdater = {

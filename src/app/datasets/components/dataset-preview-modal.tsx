@@ -101,7 +101,9 @@ export function DatasetPreviewModal({ dataset, variant = "outline" }: DatasetPre
               <div className="space-y-2 rounded-lg bg-muted/50 p-3">
                 <div className="flex items-start justify-between gap-2">
                   <span className="text-xs text-muted-foreground">Provider ID</span>
-                  <span className="text-xs font-medium font-mono">{dataset.provider.id.toString()}</span>
+                  <span className="text-xs font-medium font-mono">
+                    {dataset.provider.id.toString()}
+                  </span>
                 </div>
                 {dataset.serviceURL && (
                   <div className="flex items-start justify-between gap-2">
