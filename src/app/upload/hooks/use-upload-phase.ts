@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import type { ProviderProgress, StepId, UploadPhase, UploadStep } from "@/app/upload/types";
+import type {
+  ProviderProgress,
+  StepId,
+  UploadMode,
+  UploadPhase,
+  UploadStep,
+} from "@/app/upload/types";
 import { config } from "@/lib";
 import { useQueryClient } from "@tanstack/react-query";
 import { useConnection } from "wagmi";
@@ -37,12 +43,29 @@ const SECONDARY_PROVIDER_STEPS: StepTemplate[] = [
   { id: "confirm", label: "Confirm on-chain" },
 ];
 
-export const APP_METADATA = { source: config.dappId } as const;
+const APP_METADATA = { source: config.dappId } as const;
+
+/**
+ * Dataset metadata for each upload mode — the single source shared by the
+ * upload hooks and the cost preview, so the preview always resolves the same
+ * contexts the upload will use.
+ */
+export function uploadMetadataForMode(mode: UploadMode): Record<string, string> {
+  if (mode === "pin") return { ...APP_METADATA, withIPFSIndexing: "" };
+  if (mode === "cdn") return { ...APP_METADATA, withCDN: "" };
+  return { ...APP_METADATA };
+}
 
 export type UploadParams = {
   copies: number;
   files: File[];
   withCDN?: boolean;
+  /**
+   * Force a specific storage provider, bypassing endorsement + health-check
+   * selection. Set by the failure-recovery flow. Resolves to a single context
+   * (copies is ignored).
+   */
+  providerId?: bigint;
 };
 
 type UploadPhaseController = ReturnType<typeof useUploadPhase>;

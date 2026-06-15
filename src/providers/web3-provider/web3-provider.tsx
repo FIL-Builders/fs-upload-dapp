@@ -3,7 +3,11 @@
 import { useIsMounted } from "@/hooks";
 import { darkTheme, lightTheme, RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  defaultShouldDehydrateQuery,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import { persistQueryClient } from "@tanstack/react-query-persist-client";
 import { useTheme } from "next-themes";
 import { deserialize, serialize, WagmiProvider } from "wagmi";
@@ -34,6 +38,12 @@ if (typeof window !== "undefined") {
   persistQueryClient({
     queryClient,
     persister: localStoragePersister,
+    dehydrateOptions: {
+      // Queries holding non-serializable data (e.g. resolved StorageContext
+      // instances) opt out via meta.persist = false
+      shouldDehydrateQuery: (query) =>
+        defaultShouldDehydrateQuery(query) && query.meta?.persist !== false,
+    },
   });
 }
 

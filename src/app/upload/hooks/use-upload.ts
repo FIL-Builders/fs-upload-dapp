@@ -7,13 +7,11 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useConnection, useWalletClient } from "wagmi";
 import { queryKeys } from "@/lib/query-keys";
-import { fetchStorageMetrics } from "@/lib/storage-metrics";
 import { getSynapseClient } from "@/lib/synapse-client";
-import { useStorageConfig } from "@/providers/storage-config";
 import {
   activateProviderUploadSteps,
-  APP_METADATA,
   UPLOAD_STEPS,
+  uploadMetadataForMode,
   UploadParams,
   useUploadPhase,
 } from "./use-upload-phase";
@@ -23,7 +21,6 @@ import {
 export const useUpload = () => {
   const { address, chainId } = useConnection();
   const { data: walletClient } = useWalletClient();
-  const { config } = useStorageConfig();
   const { mutateAsync: depositAndApprove } = useDepositAndApprove();
   const phase = useUploadPhase();
 
@@ -39,31 +36,25 @@ export const useUpload = () => {
 
       phase.advance("session", "resolve");
 
-      const contexts = await synapse.storage.createContexts({
-        copies,
-        metadata: withCDN ? { ...APP_METADATA, withCDN: "" } : APP_METADATA,
-        withCDN,
-      });
+      const metadata = uploadMetadataForMode(withCDN ? "cdn" : "standard");
+      const contexts = await synapse.storage.createContexts({ copies, metadata, withCDN });
 
       phase.advance("resolve", "calculate", "Calculating storage...");
-      const datasetsToCreate = contexts.filter((c) => c.dataSetId === undefined).length;
 
       const totalSize = files.reduce((acc, file) => acc + file.size, 0);
 
-      // Storage metrics
-      const { isSufficient, depositNeeded } = await fetchStorageMetrics(
-        walletClient,
-        address,
-        config,
-        totalSize * copies,
-        { count: datasetsToCreate, withCDN: !!withCDN },
-      );
+      // Exact on-chain costs for the resolved contexts. depositNeeded is the
+      // minimum shortfall after netting available balance (lockups + fees +
+      // debt − available); funds the upload for the protocol lockup period.
+      const costs = await synapse.storage.calculateMultiContextCosts(contexts, {
+        dataSize: BigInt(totalSize),
+      });
 
       phase.complete("calculate");
 
-      if (!isSufficient) {
+      if (!costs.ready) {
         phase.activate("deposit", "Depositing funds...");
-        await depositAndApprove({ amount: depositNeeded });
+        await depositAndApprove({ amount: costs.depositNeeded });
         phase.complete("deposit");
       } else {
         phase.skip("deposit");
@@ -81,7 +72,8 @@ export const useUpload = () => {
         pieces,
         failures,
         fileCount: files.length,
-        copies,
+        // Actual destinations resolved (may differ from requested copies)
+        copies: contexts.length,
         totalSize,
         hasFailures: failures.length > 0,
       };
