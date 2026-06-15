@@ -39,7 +39,4 @@ export const queryKeys = {
 
   loginSession: (address: `0x${string}` | undefined, chainId: number | undefined) =>
     ["loginSession", address, chainId] as const,
-
-  revokeSession: (address: `0x${string}` | undefined, chainId: number | undefined) =>
-    ["revokeSession", address, chainId] as const,
 } as const;

@@ -1,0 +1,6 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  // Transitive runtime requirement of RainbowKit's WalletConnect connector —
+  // never imported directly, so knip cannot see its usage.
+  "ignoreDependencies": ["@walletconnect/ethereum-provider"]
+}

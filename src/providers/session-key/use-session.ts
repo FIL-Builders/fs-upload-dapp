@@ -77,16 +77,6 @@ async function loginSession(
   return sessionKey;
 }
 
-async function revokeSession(walletClient: WalletClient, chainId: number) {
-  const sessionKey = getSessionKey(walletClient, chainId);
-  if (!sessionKey) throw new Error("Session key not found");
-  const client = walletClient as Parameters<typeof SessionKey.revoke>[0];
-  const revokeTx = await SessionKey.revoke(client, {
-    address: sessionKey.address,
-  });
-  await waitForTransactionReceipt(client, { hash: revokeTx });
-}
-
 async function validateSession(walletClient: WalletClient, address: string, chainId: number) {
   const sessionData = getStoredSession(address, chainId);
   if (!sessionData) return { isValid: false, expiresAt: undefined };
@@ -193,28 +183,6 @@ export function useLoginSession() {
     },
     onSettled: () => {
       closeModal();
-    },
-  });
-}
-
-export function useRevokeSession() {
-  const { address, chainId } = useConnection();
-  const { data: walletClient } = useWalletClient();
-  const queryClient = useQueryClient();
-  const clear = useSessionStore((s) => s.clear);
-
-  return useMutation({
-    mutationKey: queryKeys.revokeSession(address, chainId),
-    mutationFn: async () => {
-      if (!address || !chainId || !walletClient) throw new Error("Wallet not connected");
-      await revokeSession(walletClient, chainId);
-      clear(address, chainId);
-    },
-    onSuccess: () => {
-      toast.success("Session revoked", { id: "session" });
-      queryClient.invalidateQueries({ queryKey: queryKeys.session(address, chainId) });
-      queryClient.invalidateQueries({ queryKey: ["balances", address] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.datasets(address, chainId) });
     },
   });
 }

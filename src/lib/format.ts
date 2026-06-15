@@ -9,13 +9,6 @@ export const DECIMAL_PLACES = {
   CURRENCY: 2,
 } as const;
 
-export function formatCapacity(gib: number): string {
-  if (gib >= 1024) {
-    return `${(gib / 1024).toFixed(2)} TiB`;
-  }
-  return `${gib.toFixed(2)} GiB`;
-}
-
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return "0 Bytes";
   const k = 1024;

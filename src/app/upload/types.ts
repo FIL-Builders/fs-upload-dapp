@@ -30,7 +30,7 @@ export interface ProviderProgress {
 }
 
 // Per-provider successful upload record
-export interface ProviderUpload {
+interface ProviderUpload {
   providerId: string;
   providerName: string;
   dataSetId: string;
