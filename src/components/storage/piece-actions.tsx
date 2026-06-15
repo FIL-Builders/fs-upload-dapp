@@ -9,6 +9,7 @@ import type { Piece } from "@/lib/datasets";
 import { buildPieceUrl, type OpenPieceParams } from "@/lib/piece";
 import { useDownloadPiece } from "@/hooks/use-download";
 import { PiecePreviewModal } from "@/components/storage";
+import { RemovalCostNote } from "@/components/storage/operation-cost-notes";
 import { ActionButton } from "@/components/ui/action-button";
 import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
@@ -106,6 +107,7 @@ export function PieceActions({ piece, pieceCid, accessParams, dataSetId }: Piece
         onConfirm={() => deletePiece.mutateAsync()}
         isPending={deletePiece.isPending}
         itemName="Piece"
+        costNote={<RemovalCostNote />}
         trigger={
           <Tooltip>
             <TooltipTrigger asChild>

@@ -202,8 +202,8 @@ export function StorageDashboard() {
                 />
                 {metrics.isRateExceeded && (
                   <p className="text-xs text-amber-600 dark:text-amber-400">
-                    {(metrics.burnRatePercent - 100).toFixed(0)}% over max — min fees from{" "}
-                    {metrics.totalDatasetCount} datasets
+                    {(metrics.burnRatePercent - 100).toFixed(0)}% over max — flat proving-service
+                    fees from {metrics.totalDatasetCount} datasets
                   </p>
                 )}
               </div>

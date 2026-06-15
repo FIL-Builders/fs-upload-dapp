@@ -1,11 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { useDataSets, useServicePrice } from "@filoz/synapse-react";
+import { useDataSets, usePriceList } from "@filoz/synapse-react";
 import { Database, Gauge, TrendingUp, Zap } from "lucide-react";
 import { useConnection } from "wagmi";
 import { getDatasetsCostInfo, transformDatasets } from "@/lib/datasets";
-import { formatCapacity } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -22,32 +21,40 @@ interface CostBreakdownModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+// Above this share of a dataset's monthly cost, the flat proving-service fee
+// dominates and consolidating into fewer datasets would save money.
+const FEE_HEAVY_THRESHOLD_PERCENT = 50;
+
 export function CostBreakdownModal({ open, onOpenChange }: CostBreakdownModalProps) {
   const { address } = useConnection();
   const { data: raw } = useDataSets({ address });
   const datasets = useMemo(() => transformDatasets(raw), [raw]);
-  const { data: pricing, isLoading } = useServicePrice();
+  const { data: pricing, isLoading } = usePriceList();
 
-  // Calculate per-dataset costs with efficiency metrics
+  // Calculate per-dataset costs with storage/fee breakdown
   const datasetCosts = useMemo(() => {
     if (!datasets || !pricing) return [];
 
     return getDatasetsCostInfo(datasets, pricing);
   }, [datasets, pricing]);
 
-  // Calculate overall efficiency metrics
+  // Overall efficiency: how much of the total monthly spend pays for actual
+  // storage vs flat per-dataset fees
   const efficiencyMetrics = useMemo(() => {
-    const totalPaidCapacity = datasetCosts.reduce((sum, d) => sum + d.paidCapacityGiB, 0);
-    const totalActualUsage = datasetCosts.reduce((sum, d) => sum + d.sizeGiB, 0);
-    const efficiencyPercent =
-      totalPaidCapacity > 0 ? (totalActualUsage / totalPaidCapacity) * 100 : 100;
-    const totalRemainingFree = datasetCosts.reduce((sum, d) => sum + d.remainingFreeCapacityGiB, 0);
+    const totalMonthly = datasetCosts.reduce((sum, d) => sum + Number(d.monthlyRateStr), 0);
+    const totalStorage = datasetCosts.reduce((sum, d) => sum + Number(d.storageMonthlyStr), 0);
+    const totalFees = totalMonthly - totalStorage;
+    const efficiencyPercent = totalMonthly > 0 ? (totalStorage / totalMonthly) * 100 : 100;
+    const feeHeavyCount = datasetCosts.filter(
+      (d) => d.feeOverheadPercent > FEE_HEAVY_THRESHOLD_PERCENT,
+    ).length;
 
     return {
-      totalPaidCapacity,
-      totalActualUsage,
+      totalMonthly,
+      totalStorage,
+      totalFees,
       efficiencyPercent,
-      totalRemainingFree,
+      feeHeavyCount,
     };
   }, [datasetCosts]);
 
@@ -65,13 +72,13 @@ export function CostBreakdownModal({ open, onOpenChange }: CostBreakdownModalPro
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Storage Efficiency Summary */}
+          {/* Cost Efficiency Summary */}
           {!isLoading && datasetCosts.length > 0 && (
             <section className="bg-muted/30 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-semibold flex items-center gap-2">
                   <Gauge className="h-4 w-4" />
-                  Storage Efficiency
+                  Cost Efficiency
                 </h3>
                 <span className="text-lg font-bold">
                   {efficiencyMetrics.efficiencyPercent.toFixed(1)}%
@@ -82,12 +89,14 @@ export function CostBreakdownModal({ open, onOpenChange }: CostBreakdownModalPro
                 className="h-2 mb-2"
               />
               <p className="text-xs text-muted-foreground">
-                Using {formatCapacity(efficiencyMetrics.totalActualUsage)} of{" "}
-                {formatCapacity(efficiencyMetrics.totalPaidCapacity)} paid capacity
+                {efficiencyMetrics.totalStorage.toFixed(4)} USDFC/month pays for storage,{" "}
+                {efficiencyMetrics.totalFees.toFixed(4)} USDFC/month goes to flat proving-service
+                fees
               </p>
-              {efficiencyMetrics.totalRemainingFree > 0 && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {formatCapacity(efficiencyMetrics.totalRemainingFree)} available at no extra cost
+              {efficiencyMetrics.feeHeavyCount > 1 && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                  {efficiencyMetrics.feeHeavyCount} datasets are dominated by the proving-service
+                  fee — consolidating uploads into fewer datasets would reduce your monthly cost
                 </p>
               )}
             </section>
@@ -124,9 +133,9 @@ export function CostBreakdownModal({ open, onOpenChange }: CostBreakdownModalPro
                               CDN
                             </Badge>
                           )}
-                          {dataset.isMinimumApplied && (
+                          {dataset.feeOverheadPercent > FEE_HEAVY_THRESHOLD_PERCENT && (
                             <Badge variant="outline" className="text-xs">
-                              Min Fee
+                              Fee-heavy
                             </Badge>
                           )}
                         </div>
@@ -141,22 +150,23 @@ export function CostBreakdownModal({ open, onOpenChange }: CostBreakdownModalPro
                       </div>
                     </div>
 
-                    {/* Per-dataset utilization bar (only show if min fee applies) */}
-                    {dataset.isMinimumApplied && (
-                      <div className="mt-3 pt-3 border-t border-muted">
-                        <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                          <span>Capacity utilization</span>
-                          <span>{dataset.utilizationPercent.toFixed(2)}%</span>
-                        </div>
-                        <Progress
-                          value={Math.min(dataset.utilizationPercent, 100)}
-                          className="h-1.5"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {formatCapacity(dataset.remainingFreeCapacityGiB)} free capacity remaining
-                        </p>
+                    {/* Storage vs flat-fee split */}
+                    <div className="mt-3 pt-3 border-t border-muted">
+                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                        <span>Storage {dataset.storageMonthlyStr} USDFC</span>
+                        <span>Proving service {dataset.datasetFeeStr} USDFC</span>
                       </div>
-                    )}
+                      <Progress
+                        value={Math.max(0, 100 - dataset.feeOverheadPercent)}
+                        className="h-1.5"
+                      />
+                      {dataset.feeOverheadPercent > FEE_HEAVY_THRESHOLD_PERCENT && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {dataset.feeOverheadPercent.toFixed(0)}% of this dataset&apos;s cost is
+                          the flat proving-service fee
+                        </p>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
