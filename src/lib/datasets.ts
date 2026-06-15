@@ -1,12 +1,8 @@
-import type { PieceWithMetadata } from "@filoz/synapse-core/warm-storage";
-import { DataSetWithPieces, UseServicePriceResult } from "@filoz/synapse-react";
-import type { PDPProvider } from "@filoz/synapse-sdk";
+import { calculateEffectiveRate, type PieceWithMetadata } from "@filoz/synapse-core/warm-storage";
+import { DataSetWithPieces, UsePriceListResult } from "@filoz/synapse-react";
+import { TIME_CONSTANTS, type PDPProvider } from "@filoz/synapse-sdk";
 import { getPieceInfoFromCid, normalizePieceCid, type SizeInfo } from "@/lib/piece";
-import {
-  bytesToGiB,
-  calculateMinimumCapacityThreshold,
-  computeMonthlyStorageCost,
-} from "./decimal";
+import { bigIntToDecimal, bytesToGiB } from "./decimal";
 import { DECIMAL_PLACES } from "./format";
 
 export interface Piece extends PieceWithMetadata, SizeInfo {}
@@ -88,24 +84,25 @@ export function computeUniquePieces(datasets: DataSet[]): UniquePiece[] {
   }));
 }
 
-export function getDatasetsCostInfo(datasets: DataSet[], pricing: UseServicePriceResult) {
-  const minimumCapacityGiB = calculateMinimumCapacityThreshold(
-    pricing.pricePerTiBPerMonthNoCDN,
-    pricing.minimumPricePerMonth,
-  );
-
+export function getDatasetsCostInfo(datasets: DataSet[], pricing: UsePriceListResult) {
   return datasets.map((dataset) => {
     const sizeGiB = bytesToGiB(dataset.totalSize.sizeBytes);
-    const { perMonth, isMinimumApplied } = computeMonthlyStorageCost(sizeGiB, pricing);
 
-    // Calculate paid capacity and utilization
-    const paidCapacityGiB = isMinimumApplied ? minimumCapacityGiB : sizeGiB;
-    const utilizationPercent = paidCapacityGiB.gt(0)
-      ? sizeGiB.div(paidCapacityGiB).mul(100).toNumber()
-      : 100;
-    const remainingFreeCapacityGiB = isMinimumApplied
-      ? Math.max(0, minimumCapacityGiB.sub(sizeGiB).toNumber())
-      : 0;
+    // Contract-accurate recurring rate: size-based storage + flat dataset fee
+    const { ratePerMonth } = calculateEffectiveRate({
+      sizeInBytes: dataset.totalSize.sizeBytes,
+      storagePerTibPerMonth: pricing.rates.storagePerTibPerMonth,
+      datasetFeePerMonth: pricing.rates.datasetFeePerMonth,
+      epochsPerMonth: TIME_CONSTANTS.EPOCHS_PER_MONTH,
+    });
+
+    const perMonth = bigIntToDecimal(ratePerMonth, 18);
+    const datasetFee =
+      dataset.totalSize.sizeBytes > 0n
+        ? bigIntToDecimal(pricing.rates.datasetFeePerMonth, 18)
+        : bigIntToDecimal(0n, 18);
+    const storagePerMonth = perMonth.sub(datasetFee);
+    const feeOverheadPercent = perMonth.gt(0) ? datasetFee.div(perMonth).mul(100).toNumber() : 0;
 
     return {
       datasetId: dataset.dataSetId.toString(),
@@ -114,10 +111,10 @@ export function getDatasetsCostInfo(datasets: DataSet[], pricing: UseServicePric
       isCDN: dataset.cdn,
       pieceCount: dataset.pieces.length,
       monthlyRateStr: perMonth.toFixed(DECIMAL_PLACES.RATE),
-      isMinimumApplied,
-      paidCapacityGiB: paidCapacityGiB.toNumber(),
-      utilizationPercent: utilizationPercent,
-      remainingFreeCapacityGiB: remainingFreeCapacityGiB,
+      storageMonthlyStr: storagePerMonth.toFixed(DECIMAL_PLACES.RATE),
+      datasetFeeStr: datasetFee.toFixed(DECIMAL_PLACES.RATE),
+      /** Share of the monthly rate consumed by the flat per-dataset fee. */
+      feeOverheadPercent,
     };
   });
 }

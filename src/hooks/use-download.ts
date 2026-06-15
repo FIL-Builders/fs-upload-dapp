@@ -1,7 +1,7 @@
 "use client";
 
 import { getErrorMessage } from "@/lib";
-import { asPieceCID, downloadAndValidate } from "@filoz/synapse-core/piece";
+import { downloadAndValidate, tryFrom } from "@filoz/synapse-core/piece";
 import { useMutation } from "@tanstack/react-query";
 import { fileTypeFromBuffer } from "file-type";
 import { toast } from "sonner";
@@ -12,7 +12,7 @@ export const useDownloadPiece = (pieceUrl: string, pieceCid: string, filename?: 
   const mutation = useMutation({
     mutationKey: queryKeys.download(pieceCid),
     mutationFn: async () => {
-      const pieceCID = asPieceCID(pieceCid);
+      const pieceCID = tryFrom(pieceCid);
       if (!pieceCID) {
         throw new Error("Invalid piece CID");
       }

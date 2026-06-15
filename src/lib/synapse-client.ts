@@ -1,7 +1,6 @@
 "use client";
 
-import { getChain, Synapse } from "@filoz/synapse-sdk";
-import { createWalletClient, custom } from "viem";
+import { Synapse } from "@filoz/synapse-sdk";
 import { getWalletClient } from "wagmi/actions";
 import { getSessionData, getSessionKey, useSessionStore } from "@/providers/session-key";
 import { wagmiConfig } from "@/providers/web3-provider";
@@ -26,19 +25,22 @@ function ensureSession(): Promise<void> {
 }
 
 export async function getSynapseClient(withSession: boolean = true) {
+  // Connector-backed viem client from wagmi — routes through the ACTIVE
+  // connector (injected, WalletConnect, …), so it carries the correct account
+  // and never depends on window.ethereum. Using this directly avoids the
+  // WalletConnect crash and wrong-account hazards of re-wrapping window.ethereum.
   const walletClient = await getWalletClient(wagmiConfig);
-  const address = walletClient.account?.address;
   const chainId = walletClient.chain?.id;
-  if (!address || !chainId) throw new Error("Wallet not connected");
-  const client = createWalletClient({
-    account: walletClient.account,
-    chain: getChain(chainId),
-    transport: custom(walletClient.transport),
-  });
+  if (!walletClient.account || !chainId) throw new Error("Wallet not connected");
+
   let sessionKey = withSession ? getSessionKey(walletClient, chainId) : undefined;
   if (!sessionKey && withSession) {
     await ensureSession();
     sessionKey = getSessionKey(walletClient, chainId);
   }
-  return new Synapse({ client, sessionClient: sessionKey?.client, source: config.dappId });
+  return new Synapse({
+    client: walletClient,
+    sessionClient: sessionKey?.client,
+    source: config.dappId,
+  });
 }

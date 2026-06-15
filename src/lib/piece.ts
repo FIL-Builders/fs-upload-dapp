@@ -1,5 +1,5 @@
 import { config } from "@/lib";
-import { asPieceCID, getSize, PieceCID } from "@filoz/synapse-core/piece";
+import { PieceCID, tryFrom } from "@filoz/synapse-core/piece";
 import { bytesToGiB, bytesToKiB, bytesToMiB } from "@/lib/decimal";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -28,7 +28,7 @@ export const normalizePieceCid = (pieceCid: PieceCID | unknown): string => {
 
   // String CID — reconstruct via SDK to normalize formatting
   const cidString = typeof pieceCid === "string" ? pieceCid : String(pieceCid);
-  const reconstructed = asPieceCID(cidString);
+  const reconstructed = tryFrom(cidString);
   if (reconstructed) {
     return reconstructed.toString();
   }
@@ -39,9 +39,10 @@ export const normalizePieceCid = (pieceCid: PieceCID | unknown): string => {
 
 export function getPieceInfoFromCid(input: PieceCID): SizeInfo {
   const cidString = normalizePieceCid(input);
-  const pieceCid = asPieceCID(cidString);
+  const pieceCid = tryFrom(cidString);
   if (!pieceCid) return { sizeBytes: 0n };
-  return { sizeBytes: BigInt(getSize(pieceCid)) };
+  // PieceCID.size is the raw (unpadded) payload size in bytes
+  return { sizeBytes: BigInt(pieceCid.size) };
 }
 
 // ─── Size formatting ─────────────────────────────────────────────────────────

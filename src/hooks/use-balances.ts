@@ -15,7 +15,12 @@ type StorageMetrics = Awaited<ReturnType<typeof fetchStorageMetrics>>;
 export type BalancesData = {
   filBalance: bigint;
   usdfcBalance: bigint;
+  /** Spendable storage balance (availableFunds = deposited funds minus lockups). */
   warmStorageBalance: bigint;
+  /** Total deposited funds in the Payments contract. */
+  warmStorageTotalFunds: bigint;
+  /** Locked portion: prepaid lifecycle reserves + streaming-rate lockup. */
+  warmStorageLockedFunds: bigint;
 } & StorageMetrics;
 
 export const useBalances = () => {
@@ -38,10 +43,14 @@ export const useBalances = () => {
 
       const storageMetrics = await fetchStorageMetrics(publicClient, address, config);
 
+      const lockedFunds = paymentsRaw.funds - paymentsRaw.availableFunds;
+
       return {
         filBalance: filRaw,
         usdfcBalance: usdfcRaw.value,
         warmStorageBalance: paymentsRaw.availableFunds,
+        warmStorageTotalFunds: paymentsRaw.funds,
+        warmStorageLockedFunds: lockedFunds > 0n ? lockedFunds : 0n,
         ...storageMetrics,
       };
     },
@@ -57,13 +66,13 @@ const defaultBalances: BalancesData = {
   filBalance: 0n,
   usdfcBalance: 0n,
   warmStorageBalance: 0n,
+  warmStorageTotalFunds: 0n,
+  warmStorageLockedFunds: 0n,
   depositNeeded: 0n,
   availableToFreeUp: 0n,
   daysLeft: "0",
   daysLeftAtCurrentRate: "Infinity",
-  isSufficient: false,
-  isRateSufficient: false,
-  isLockupSufficient: false,
+  isFwssApproved: false,
   totalConfiguredCapacity: 0,
   currentMonthlyRate: 0n,
   maxMonthlyRate: 0n,
