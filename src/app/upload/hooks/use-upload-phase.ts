@@ -22,7 +22,7 @@ export const UPLOAD_STEPS: StepTemplate[] = [
   { id: "session", label: "Session key" },
   { id: "resolve", label: "Resolve providers" },
   { id: "calculate", label: "Calculate storage" },
-  { id: "deposit", label: "Deposit funds" },
+  { id: "deposit", label: "Deposit & approve" },
 ];
 
 export const PIN_STEPS: StepTemplate[] = [
@@ -30,7 +30,7 @@ export const PIN_STEPS: StepTemplate[] = [
   { id: "session", label: "Session key" },
   { id: "resolve", label: "Resolve providers" },
   { id: "calculate", label: "Calculate storage" },
-  { id: "deposit", label: "Deposit funds" },
+  { id: "deposit", label: "Deposit & approve" },
 ];
 
 const PRIMARY_PROVIDER_STEPS: StepTemplate[] = [
@@ -60,12 +60,6 @@ export type UploadParams = {
   copies: number;
   files: File[];
   withCDN?: boolean;
-  /**
-   * Force a specific storage provider, bypassing endorsement + health-check
-   * selection. Set by the failure-recovery flow. Resolves to a single context
-   * (copies is ignored).
-   */
-  providerId?: bigint;
 };
 
 type UploadPhaseController = ReturnType<typeof useUploadPhase>;

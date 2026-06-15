@@ -2,11 +2,10 @@
 
 import { useState } from "react";
 import { useDeletePiece } from "@/hooks";
-import { config } from "@/lib";
 import { Download, Globe, Link as LinkIcon, Server, Trash2 } from "lucide-react";
 import { useConnection } from "wagmi";
 import type { Piece } from "@/lib/datasets";
-import { buildPieceUrl, type OpenPieceParams } from "@/lib/piece";
+import { buildIpfsUrl, buildPieceUrl, type OpenPieceParams } from "@/lib/piece";
 import { useDownloadPiece } from "@/hooks/use-download";
 import { PiecePreviewModal } from "@/components/storage";
 import { RemovalCostNote } from "@/components/storage/operation-cost-notes";
@@ -49,9 +48,7 @@ export function PieceActions({ piece, pieceCid, accessParams, dataSetId }: Piece
       : null;
 
   const ipfsUrl =
-    hasIPFS && accessParams.ipfsRootCid
-      ? `${config.ipfsGatewayUrl}${accessParams.ipfsRootCid}`
-      : null;
+    hasIPFS && accessParams.ipfsRootCid ? buildIpfsUrl(accessParams.ipfsRootCid) : null;
 
   const spUrl = hasSP ? `${accessParams.serviceURL}/piece/${pieceCid}` : null;
 

@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import {
   planCounts,
   toProviderHealth,
@@ -8,16 +7,16 @@ import {
   type ProviderHealth,
 } from "@/app/upload/lib/upload-plan";
 import * as Pay from "@filoz/synapse-core/pay";
+import { getDataSetSizes } from "@filoz/synapse-core/pdp-verifier";
 import { ping } from "@filoz/synapse-core/sp";
 import {
   fetchProviderSelectionInput,
   type ProviderSelectionInput,
 } from "@filoz/synapse-core/warm-storage";
-import { useDataSets, usePriceList, type UsePriceListResult } from "@filoz/synapse-react";
+import { usePriceList, type UsePriceListResult } from "@filoz/synapse-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Address } from "viem";
 import { useConnection, usePublicClient } from "wagmi";
-import { transformDatasets } from "@/lib/datasets";
 
 // Each SDK ping has a ~1s overall budget (internal retries included). To avoid
 // false "unreachable" verdicts from a single transient failure, retry the whole
@@ -50,15 +49,21 @@ interface UploadPlan {
   input: ProviderSelectionInput;
   /** Per-provider endorsement + reachability (cached ping results). */
   health: ProviderHealth[];
-  /** dataSetId → current stored bytes (from the client's datasets). */
+  /**
+   * dataSetId → current on-chain stored bytes (leafCount × 32), read from the
+   * PDP verifier — the same source and units the SDK's
+   * `calculateMultiContextCosts` uses at upload time, so reused-dataset cost
+   * previews match the upload-time figure.
+   */
   sizeByDataSetId: Map<bigint, bigint>;
 }
 
 /**
  * One-time fetch of everything upload planning needs, cached per (address,
  * chain): the price list, account state, the provider universe with health,
- * and the client's datasets. After this resolves, the cost preview recomputes
- * entirely offline for every configuration change (see `useUploadCostPreview`).
+ * and the client's existing dataset sizes. After this resolves, the cost
+ * preview recomputes entirely offline for every configuration change (see
+ * `useUploadCostPreview`).
  *
  * The provider/account query is `persist: false` — it holds Maps and live
  * health that must not be serialized to localStorage.
@@ -67,7 +72,6 @@ export function useUploadPlan() {
   const { address, chainId, isConnected } = useConnection();
   const publicClient = usePublicClient();
   const { data: priceList, isLoading: priceLoading } = usePriceList();
-  const { data: rawDatasets, isLoading: datasetsLoading } = useDataSets({ address });
 
   const lockupPeriod = priceList?.lockups.defaultLockupPeriod;
 
@@ -86,12 +90,23 @@ export function useUploadPlan() {
         }),
       ]);
 
-      // Same health check smartSelect runs (GET {serviceURL}/pdp/ping), but
-      // retried up to PING_ATTEMPTS times to avoid false-negative verdicts
-      const pings = await Promise.allSettled(
-        input.providers.map((p) => pingWithRetries(p.pdp.serviceURL)),
-      );
+      // Provider health and existing-dataset sizes both derive from `input`;
+      // fetch them together. Health: the same check smartSelect runs (GET
+      // {serviceURL}/pdp/ping), retried up to PING_ATTEMPTS times to avoid
+      // false-negative verdicts. Sizes: the on-chain leafCount × 32 from the
+      // PDP verifier — the SAME source calculateMultiContextCosts reads at
+      // upload time, so reused-dataset previews match (0n for non-live sets).
+      const dataSetIds = input.clientDataSets.map((ds) => ds.dataSetId);
+      const [pings, sizes] = await Promise.all([
+        Promise.allSettled(input.providers.map((p) => pingWithRetries(p.pdp.serviceURL))),
+        dataSetIds.length > 0
+          ? getDataSetSizes(client, { dataSetIds })
+          : Promise.resolve([] as bigint[]),
+      ]);
       const health = toProviderHealth(input.providers, input.endorsedIds, pings);
+
+      const sizeByDataSetId = new Map<bigint, bigint>();
+      for (let i = 0; i < dataSetIds.length; i++) sizeByDataSetId.set(dataSetIds[i], sizes[i]);
 
       const account: AccountSnapshot = {
         availableFunds: accountSummary.availableFunds,
@@ -100,7 +115,7 @@ export function useUploadPlan() {
         lockupRatePerEpoch: accountSummary.lockupRatePerEpoch,
       };
 
-      return { input, account, approved, health };
+      return { input, account, approved, health, sizeByDataSetId };
     },
     meta: { persist: false },
     staleTime: 60_000,
@@ -108,14 +123,6 @@ export function useUploadPlan() {
     retry: 1,
     retryDelay: 1_500,
   });
-
-  const sizeByDataSetId = useMemo(() => {
-    const map = new Map<bigint, bigint>();
-    for (const ds of transformDatasets(rawDatasets)) {
-      map.set(ds.dataSetId, ds.totalSize.sizeBytes);
-    }
-    return map;
-  }, [rawDatasets]);
 
   const plan: UploadPlan | undefined =
     query.data && priceList
@@ -125,14 +132,14 @@ export function useUploadPlan() {
           approved: query.data.approved,
           input: query.data.input,
           health: query.data.health,
-          sizeByDataSetId,
+          sizeByDataSetId: query.data.sizeByDataSetId,
         }
       : undefined;
 
   return {
     plan,
     counts: query.data ? planCounts(query.data.health) : undefined,
-    isLoading: priceLoading || datasetsLoading || query.isLoading,
+    isLoading: priceLoading || query.isLoading,
     isFetching: query.isFetching,
     error: query.error ?? undefined,
     refetch: () => void query.refetch(),

@@ -2,7 +2,7 @@
 
 import { buildCarFromFiles, uploadToContexts, waitForIpniProviderResults } from "@/app/upload/lib";
 import { getErrorMessage } from "@/lib";
-import { useDepositAndApprove } from "@filoz/synapse-react";
+import { useApproveOperator, useDepositAndApprove } from "@filoz/synapse-react";
 import { useMutation } from "@tanstack/react-query";
 import { CID } from "multiformats/cid";
 import { toast } from "sonner";
@@ -23,6 +23,7 @@ export const useFilecoinPinUpload = () => {
   const { address, chainId } = useConnection();
   const { data: walletClient } = useWalletClient();
   const { mutateAsync: depositAndApprove } = useDepositAndApprove();
+  const { mutateAsync: approveOperator } = useApproveOperator();
   const phase = useUploadPhase();
 
   const mutation = useMutation({
@@ -57,8 +58,17 @@ export const useFilecoinPinUpload = () => {
       phase.complete("calculate");
 
       if (!costs.ready) {
-        phase.activate("deposit", "Depositing funds...");
-        await depositAndApprove({ amount: costs.depositNeeded });
+        // depositAndApprove deposits the shortfall AND (re)approves the FWSS
+        // operator atomically; it rejects a zero amount. When funds already
+        // cover the upload and only the operator approval is missing, approve
+        // directly instead.
+        if (costs.depositNeeded > 0n) {
+          phase.activate("deposit", "Depositing funds...");
+          await depositAndApprove({ amount: costs.depositNeeded });
+        } else {
+          phase.activate("deposit", "Approving operator...");
+          await approveOperator();
+        }
         phase.complete("deposit");
       } else {
         phase.skip("deposit");

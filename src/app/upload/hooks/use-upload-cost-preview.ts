@@ -5,6 +5,7 @@ import { useUploadPlan } from "@/app/upload/hooks/use-upload-plan";
 import {
   deriveUploadCosts,
   planContexts,
+  type PlanCounts,
   type ProviderHealth,
   type ResolutionErrorInfo,
   type UploadCostBreakdown,
@@ -23,7 +24,7 @@ export interface UploadCostPreview {
   fetchError?: ResolutionErrorInfo;
   /** Provider health table (available once the plan loads). */
   providers: ProviderHealth[];
-  counts?: { approved: number; endorsed: number; reachable: number; reachableEndorsed: number };
+  counts?: PlanCounts;
   availableFunds: bigint;
   /** Resolved storage contexts for the current configuration. */
   locations?: ResolvedLocation[];

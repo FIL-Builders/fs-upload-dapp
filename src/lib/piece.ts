@@ -92,13 +92,21 @@ export function getPdpScannerUrl(dataSetId: bigint | string, chainId?: number): 
   return `https://pdp.vxb.ai/${network}/dataset/${dataSetId}`;
 }
 
+/**
+ * IPFS subdomain-gateway URL for a CID: `https://<cid>.ipfs.<host>/`.
+ * Subdomain form (vs. path form) gives each CID its own browser origin.
+ */
+export function buildIpfsUrl(cid: string): string {
+  return `https://${cid}.ipfs.${config.ipfsGatewayHost}/`;
+}
+
 export function buildPieceUrl(
   params: OpenPieceParams & { address: string; chainId?: number },
 ): string {
   const { pieceCid, isCDN, address, serviceURL, withIPFSIndexing, ipfsRootCid, chainId } = params;
 
   if (withIPFSIndexing && ipfsRootCid) {
-    return `${config.ipfsGatewayUrl}${ipfsRootCid}`;
+    return buildIpfsUrl(ipfsRootCid);
   }
   if (isCDN) {
     const network = resolveNetwork(chainId);

@@ -6,8 +6,10 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export const config = {
-  ipfsGatewayUrl: process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL ?? "https://ipfs.io/ipfs/",
-  dappId: process.env.NEXT_PUBLIC_DAPP_ID ?? "fs-upload-dapp",
+  // IPFS subdomain-gateway host. Content is served from
+  // `https://<cid>.ipfs.<host>/` (subdomain form — each CID gets its own origin).
+  ipfsGatewayHost: process.env.NEXT_PUBLIC_IPFS_GATEWAY_HOST ?? "inbrowser.link",
+  dappId: process.env.NEXT_PUBLIC_DAPP_ID ?? "foc-upload-dapp",
 };
 
 export function scopeKey(address: string, chainId: number) {

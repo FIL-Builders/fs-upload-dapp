@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Agent-optimized reference for the fs-upload-dapp codebase. Every function includes its file path.
+Agent-optimized reference for the foc-upload-dapp codebase. Every function includes its file path.
 
 ## Project
 
@@ -281,7 +281,7 @@ react → next → third-party → @/lib → @/hooks → @/providers → @/types
 
 ## Environment Variables
 
-- `NEXT_PUBLIC_IPFS_GATEWAY_URL` — IPFS gateway (default: `https://ipfs.io/ipfs/`)
+- `NEXT_PUBLIC_IPFS_GATEWAY_HOST` — IPFS subdomain-gateway host; content is served from `https://<cid>.ipfs.<host>/` (default: `inbrowser.link`)
 - `NEXT_PUBLIC_DAPP_ID` — dApp identifier (default: `foc-upload-dapp`)
 - `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` — WalletConnect project ID (default: `foc-upload-dapp`)
 
