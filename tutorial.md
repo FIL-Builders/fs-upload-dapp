@@ -1,6 +1,6 @@
 # 🚀 Understanding the Filecoin Synapse dApp
 
-This tutorial explains how the **fs-upload-dapp** works—a production-ready Next.js application demonstrating file storage on Filecoin using the **synapse-sdk**. Instead of building from scratch, you'll explore the core workflows and understand how hooks and utilities power the application. 📚
+This tutorial explains how the **foc-upload-dapp** works—a production-ready Next.js application demonstrating file storage on Filecoin using the **synapse-sdk**. Instead of building from scratch, you'll explore the core workflows and understand how hooks and utilities power the application. 📚
 
 [synapse-sdk](https://github.com/FilOzone/synapse-sdk) is a JS/TS SDK for interacting with **Filecoin Synapse** — a smart-contract based marketplace for a collection of services derived from the Filecoin ecosystem, such as Filecoin onchain payment service, hot storage service using PDP, retrieval service, etc. 🛠️
 
@@ -10,8 +10,8 @@ This tutorial explains how the **fs-upload-dapp** works—a production-ready Nex
 
 ```sh
 # Clone the repository and start the app
-git clone https://github.com/FIL-Builders/fs-upload-dapp
-cd fs-upload-dapp
+git clone https://github.com/FIL-Builders/foc-upload-dapp
+cd foc-upload-dapp
 pnpm install
 pnpm dev
 ```
@@ -195,7 +195,7 @@ For **Pin mode**, [`useFilecoinPinUpload`](src/app/upload/hooks/use-pin-upload.t
 
 - [`car-builder.ts`](src/app/upload/lib/filecoin-pin/car-builder.ts) 🏗️ — Builds a CAR file from selected files, preserving directory structure. Single files get a direct CID; multiple files/folders get a directory CID as root.
 
-- **IPFS Indexing**: Uploading with `withIPFSIndexing` metadata tells storage providers to **announce your content on IPNI** (part of the IPFS network). This means your files become publicly retrievable from **any IPFS gateway** (e.g., `https://ipfs.io/ipfs/<rootCid>`).
+- **IPFS Indexing**: Uploading with `withIPFSIndexing` metadata tells storage providers to **announce your content on IPNI** (part of the IPFS network). This means your files become publicly retrievable from **any IPFS gateway** (e.g., `https://<rootCid>.ipfs.inbrowser.link/`).
 
 - **IPFS Root CID vs Piece CID**: The `ipfsRootCid` (the IPFS content hash) is different from the `pieceCid` (Filecoin's storage identifier). The IPFS root CID is stored as **on-chain metadata** alongside the piece, so you don't need to recompute it — it's always available when querying your datasets.
 
@@ -234,7 +234,7 @@ The [`useDelete`](src/hooks/use-delete.ts) hook handles piece and dataset deleti
 ## 📚 Resources
 
 - **Filecoin Onchain Cloud**: [Documentation](https://docs.filecoin.cloud/) — core concepts, developer guides, and API reference for Synapse SDK
-- **Source Code**: [GitHub Repository](https://github.com/FIL-Builders/fs-upload-dapp)
+- **Source Code**: [GitHub Repository](https://github.com/FIL-Builders/foc-upload-dapp)
 - **Synapse SDK**: [NPM Package](https://www.npmjs.com/package/@filoz/synapse-sdk)
 - **PDP**: [PDP Docs](https://github.com/FilOzone/pdp/blob/main/docs/design.md)
 - **Payments contract**: [Payments Contracts](https://github.com/FilOzone/filecoin-services-payments/blob/main/README.md)

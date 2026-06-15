@@ -12,9 +12,10 @@ interface BalanceCardProps {
   value: string; // Decimal string for precision
   unit: string;
   isLoading: boolean;
+  subValue?: string;
 }
 
-function BalanceCard({ icon: Icon, label, value, unit, isLoading }: BalanceCardProps) {
+function BalanceCard({ icon: Icon, label, value, unit, isLoading, subValue }: BalanceCardProps) {
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -29,9 +30,12 @@ function BalanceCard({ icon: Icon, label, value, unit, isLoading }: BalanceCardP
         {isLoading ? (
           <Skeleton className="h-8 w-28" />
         ) : (
-          <p className="text-2xl font-bold">
-            {value} <span className="text-sm font-normal text-muted-foreground">{unit}</span>
-          </p>
+          <>
+            <p className="text-2xl font-bold">
+              {value} <span className="text-sm font-normal text-muted-foreground">{unit}</span>
+            </p>
+            {subValue && <p className="text-xs text-muted-foreground mt-1">{subValue}</p>}
+          </>
         )}
       </CardContent>
     </Card>
@@ -40,6 +44,8 @@ function BalanceCard({ icon: Icon, label, value, unit, isLoading }: BalanceCardP
 
 export function BalanceCards() {
   const { data: balances, isLoading } = useBalances();
+
+  const hasLocked = balances.warmStorageLockedFunds > 0n;
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
@@ -59,10 +65,15 @@ export function BalanceCards() {
       />
       <BalanceCard
         icon={HardDrive}
-        label="Storage Balance"
+        label="Storage Balance (available)"
         value={formatBalance(balances.warmStorageBalance, 18, DECIMAL_PLACES.USDFC)}
         unit="USDFC"
         isLoading={isLoading}
+        subValue={
+          hasLocked
+            ? `+ ${formatBalance(balances.warmStorageLockedFunds, 18, DECIMAL_PLACES.USDFC)} USDFC locked (refundable reserves & runway)`
+            : undefined
+        }
       />
     </div>
   );

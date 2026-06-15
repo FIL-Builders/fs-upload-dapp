@@ -59,10 +59,14 @@ export const useDeleteDataset = (dataSetId: bigint) => {
       });
       toast.loading("Deleting dataset...", { id: toastId });
 
-      const hash = await context.terminate();
-      await synapse.client.waitForTransactionReceipt({
-        hash,
-      });
+      // Provider-relayed by default; txHash is only set when an on-chain
+      // transaction was submitted (fallback path)
+      const result = await context.terminate();
+      if (result.txHash) {
+        await synapse.client.waitForTransactionReceipt({
+          hash: result.txHash,
+        });
+      }
     },
     onSuccess: () => {
       toast.success("Dataset deleted!", { id: toastId });

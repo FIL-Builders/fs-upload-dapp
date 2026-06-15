@@ -9,15 +9,29 @@ interface CopiesSelectorProps {
   copies: number;
   onCopiesChange: (copies: number) => void;
   disabled?: boolean;
+  /** Cap the offered options to the number of providers that can serve them. */
+  max?: number;
+  /** Muted note explaining the cap (e.g. provider availability). */
+  hint?: string;
 }
 
-export function CopiesSelector({ copies, onCopiesChange, disabled }: CopiesSelectorProps) {
+export function CopiesSelector({
+  copies,
+  onCopiesChange,
+  disabled,
+  max = COPY_OPTIONS.length,
+  hint,
+}: CopiesSelectorProps) {
+  // One copy per distinct provider — never offer more than are available
+  const limit = Math.max(1, Math.min(max, COPY_OPTIONS.length));
+  const options = COPY_OPTIONS.filter((n) => n <= limit);
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="flex items-center gap-3">
         <Label className="text-sm font-medium shrink-0">Copies</Label>
         <div className="flex gap-1">
-          {COPY_OPTIONS.map((n) => (
+          {options.map((n) => (
             <button
               key={n}
               type="button"
@@ -28,6 +42,7 @@ export function CopiesSelector({ copies, onCopiesChange, disabled }: CopiesSelec
                 copies === n
                   ? "bg-primary text-primary-foreground border-primary"
                   : "bg-background text-muted-foreground border-border hover:border-primary hover:text-foreground",
+                disabled && "opacity-50",
               )}
             >
               {n}
@@ -35,6 +50,7 @@ export function CopiesSelector({ copies, onCopiesChange, disabled }: CopiesSelec
           ))}
         </div>
       </div>
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
 }

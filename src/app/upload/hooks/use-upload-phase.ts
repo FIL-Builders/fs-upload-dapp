@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import type { ProviderProgress, StepId, UploadPhase, UploadStep } from "@/app/upload/types";
+import type {
+  ProviderProgress,
+  StepId,
+  UploadMode,
+  UploadPhase,
+  UploadStep,
+} from "@/app/upload/types";
 import { config } from "@/lib";
 import { useQueryClient } from "@tanstack/react-query";
 import { useConnection } from "wagmi";
@@ -16,7 +22,7 @@ export const UPLOAD_STEPS: StepTemplate[] = [
   { id: "session", label: "Session key" },
   { id: "resolve", label: "Resolve providers" },
   { id: "calculate", label: "Calculate storage" },
-  { id: "deposit", label: "Deposit funds" },
+  { id: "deposit", label: "Deposit & approve" },
 ];
 
 export const PIN_STEPS: StepTemplate[] = [
@@ -24,7 +30,7 @@ export const PIN_STEPS: StepTemplate[] = [
   { id: "session", label: "Session key" },
   { id: "resolve", label: "Resolve providers" },
   { id: "calculate", label: "Calculate storage" },
-  { id: "deposit", label: "Deposit funds" },
+  { id: "deposit", label: "Deposit & approve" },
 ];
 
 const PRIMARY_PROVIDER_STEPS: StepTemplate[] = [
@@ -37,7 +43,18 @@ const SECONDARY_PROVIDER_STEPS: StepTemplate[] = [
   { id: "confirm", label: "Confirm on-chain" },
 ];
 
-export const APP_METADATA = { source: config.dappId } as const;
+const APP_METADATA = { source: config.dappId } as const;
+
+/**
+ * Dataset metadata for each upload mode — the single source shared by the
+ * upload hooks and the cost preview, so the preview always resolves the same
+ * contexts the upload will use.
+ */
+export function uploadMetadataForMode(mode: UploadMode): Record<string, string> {
+  if (mode === "pin") return { ...APP_METADATA, withIPFSIndexing: "" };
+  if (mode === "cdn") return { ...APP_METADATA, withCDN: "" };
+  return { ...APP_METADATA };
+}
 
 export type UploadParams = {
   copies: number;

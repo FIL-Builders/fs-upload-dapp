@@ -2,9 +2,9 @@
 
 import { useMemo } from "react";
 import type { PieceResult, ResultData } from "@/app/upload/types";
-import { config } from "@/lib";
 import { AlertTriangle, CheckCircle2, ExternalLink, XCircle } from "lucide-react";
 import { formatFileSize, pluralize } from "@/lib/format";
+import { buildIpfsUrl } from "@/lib/piece";
 import { ExplorerLink } from "@/components/layout/explorer-link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -120,11 +120,7 @@ export function UploadResults({ result, onReset }: UploadResultsProps) {
         {/* Gateway link (pin only) */}
         {isPin && result.ipfsRootCid && (
           <Button asChild variant="outline" className="w-full">
-            <a
-              href={`${config.ipfsGatewayUrl}${result.ipfsRootCid}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <a href={buildIpfsUrl(result.ipfsRootCid)} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="mr-2 h-4 w-4" />
               Open on IPFS Gateway
             </a>

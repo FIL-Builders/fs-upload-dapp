@@ -1,27 +1,26 @@
 import * as Pay from "@filoz/synapse-core/pay";
-import { getServicePrice } from "@filoz/synapse-core/warm-storage";
-import { UseServicePriceResult } from "@filoz/synapse-react";
+import { epochsToDays } from "@filoz/synapse-core/utils";
+import { calculateEffectiveRate, getPriceList } from "@filoz/synapse-core/warm-storage";
+import { UsePriceListResult } from "@filoz/synapse-react";
 import { SIZE_CONSTANTS, TIME_CONSTANTS } from "@filoz/synapse-sdk";
-import { maxUint256, type Chain, type Client, type Hex, type Transport } from "viem";
+import type { Chain, Client, Hex, Transport } from "viem";
 import type { DataSet } from "@/lib/datasets";
-import {
-  AppDecimal,
-  bigIntToDecimal,
-  bytesToGiB,
-  calculateMinimumCapacityThreshold,
-  computeMonthlyStorageCost,
-  safeDivide,
-  toDecimal,
-} from "@/lib/decimal";
+import { AppDecimal, bigIntToDecimal, bytesToGiB } from "@/lib/decimal";
 import { DECIMAL_PLACES, formatBalance, parseDaysLeft } from "@/lib/format";
 import type { BalancesData } from "@/hooks/use-balances";
 
-// 1 USDFC (in wei) — protocol fee for creating a CDN-enabled dataset
-const CDN_DATA_SET_CREATION_COST = toDecimal(10n ** 18n);
-
-const zeroDecimal = toDecimal(0);
 /**
- * Calculate storage metrics using Decimal for precision
+ * Account storage metrics, sourced from the SDK rather than local formulas:
+ *
+ * - Balances, current burn rate, and runway come from `Pay.getAccountSummary`
+ *   (lockup-rate and debt aware, matching the Payments contract).
+ * - Rate projections use `calculateEffectiveRate` (the contract's pricing).
+ * - Operator approval uses `isFwssMaxApproved` (the SDK's canonical check).
+ *
+ * Upload-time deposit gating does not live here — the upload hooks call
+ * `synapse.storage.calculateMultiContextCosts` on the resolved contexts for
+ * the exact on-chain figure. The only app-specific concepts in this file are
+ * the configured persistence period and the low-balance warning threshold.
  */
 export const fetchStorageMetrics = async (
   client: Client<Transport, Chain>,
@@ -31,76 +30,59 @@ export const fetchStorageMetrics = async (
     persistencePeriod: number;
     minDaysThreshold: number;
   },
-  fileSize?: number,
-  newDatasets?: {
-    count: number;
-    withCDN: boolean;
-  },
 ) => {
-  const bytesToStore = fileSize
-    ? fileSize
-    : Number(BigInt(config.storageCapacity) * SIZE_CONSTANTS.GiB);
-
-  const count = newDatasets?.count ?? 0;
-  const withCDN = newDatasets?.withCDN ?? false;
-
-  const [allowance, accountInfo, prices] = await Promise.all([
-    Pay.operatorApprovals(client, { address }),
-    Pay.accounts(client, { address }),
-    getServicePrice(client),
+  const [summary, priceList] = await Promise.all([
+    Pay.getAccountSummary(client, { address }),
+    getPriceList(client),
   ]);
-  const minFees = toDecimal(prices.minimumPricePerMonth);
 
-  const currentMonthlyRate = toDecimal(allowance.rateUsage * TIME_CONSTANTS.EPOCHS_PER_MONTH);
-  const currentDailyRate = toDecimal(allowance.rateUsage * TIME_CONSTANTS.EPOCHS_PER_DAY);
+  // Reuse the fetched price list's lockup period so the approval check
+  // doesn't read getPriceList again.
+  const isFwssApproved = await Pay.isFwssMaxApproved(client, {
+    clientAddress: address,
+    requiredMaxLockupPeriod: priceList.lockups.defaultLockupPeriod,
+  });
 
-  const availableFunds = toDecimal(accountInfo.availableFunds);
+  // Projected recurring rate at the configured capacity. Includes one flat
+  // dataset fee — storing anything requires at least one dataset.
+  const { ratePerEpoch, ratePerMonth } = calculateEffectiveRate({
+    sizeInBytes: BigInt(config.storageCapacity) * SIZE_CONSTANTS.GiB,
+    storagePerTibPerMonth: priceList.rates.storagePerTibPerMonth,
+    datasetFeePerMonth: priceList.rates.datasetFeePerMonth,
+    epochsPerMonth: TIME_CONSTANTS.EPOCHS_PER_MONTH,
+  });
 
-  const perMonth = toDecimal(prices.pricePerTiBPerMonthNoCDN)
-    .mul(bytesToStore)
-    .div(SIZE_CONSTANTS.TiB);
+  const availableFunds = summary.availableFunds;
 
-  const perDay = perMonth.div(TIME_CONSTANTS.DAYS_PER_MONTH);
+  // Runway at the configured max rate (what-if projection).
+  const daysLeftBig = ratePerEpoch > 0n ? epochsToDays(availableFunds / ratePerEpoch) : null;
+  const daysLeft = daysLeftBig === null ? "Infinity" : daysLeftBig.toString();
 
-  const daysLeftDecimal = safeDivide(availableFunds, perDay);
+  // Runway at the actual on-chain rate — SDK-resolved, debt-aware.
+  const daysLeftAtCurrentRate =
+    summary.lockupRatePerEpoch > 0n ? epochsToDays(summary.runwayInEpochs).toString() : "Infinity";
 
-  const daysLeftAtCurrentRateDecimal = currentDailyRate.isZero()
-    ? Infinity
-    : safeDivide(availableFunds, currentDailyRate);
+  // Funds required to cover the configured persistence period at max rate.
+  const persistenceEpochs = BigInt(config.persistencePeriod) * TIME_CONSTANTS.EPOCHS_PER_DAY;
+  const amountNeeded = ratePerEpoch * persistenceEpochs;
 
-  const totalUpfrontNeeded = (count ? minFees.mul(count) : zeroDecimal).add(
-    withCDN ? CDN_DATA_SET_CREATION_COST.mul(count) : zeroDecimal,
-  );
+  const belowThreshold = daysLeftBig !== null && daysLeftBig < BigInt(config.minDaysThreshold);
+  const shortfall = amountNeeded - availableFunds;
+  const depositNeeded = belowThreshold && shortfall > 0n ? shortfall : 0n;
 
-  const amountNeeded = perDay.mul(config.persistencePeriod).add(totalUpfrontNeeded);
-
-  const isBalanceSufficient = availableFunds.gte(amountNeeded);
-
-  const totalDepositNeeded = daysLeftDecimal.gte(config.minDaysThreshold)
-    ? isBalanceSufficient
-      ? zeroDecimal
-      : totalUpfrontNeeded.sub(availableFunds)
-    : amountNeeded.sub(availableFunds);
-
-  const availableToFreeUp = availableFunds.sub(amountNeeded);
-
-  // Synapse uses maxUint256 for "unlimited". Checking >= half catches both exact and near-max approvals.
-  const isRateSufficient = allowance.rateAllowance >= maxUint256 / 2n;
-  const isLockupSufficient = allowance.lockupAllowance >= maxUint256 / 2n;
-
-  const isSufficient = isRateSufficient && isLockupSufficient && totalDepositNeeded.isZero();
+  const availableToFreeUp = availableFunds - amountNeeded;
 
   return {
-    depositNeeded: BigInt(totalDepositNeeded.round().toString()),
-    availableToFreeUp: BigInt(availableToFreeUp.round().toString()),
-    daysLeft: daysLeftDecimal.toString(),
-    daysLeftAtCurrentRate: daysLeftAtCurrentRateDecimal.toString(),
-    isRateSufficient,
-    isLockupSufficient,
-    isSufficient: isSufficient,
+    depositNeeded,
+    availableToFreeUp,
+    daysLeft,
+    daysLeftAtCurrentRate,
+    isFwssApproved,
     totalConfiguredCapacity: config.storageCapacity,
-    currentMonthlyRate: BigInt(currentMonthlyRate.toString()),
-    maxMonthlyRate: BigInt(perMonth.round().toString()),
+    /** Actual account-wide burn rate from the Payments contract. */
+    currentMonthlyRate: summary.lockupRatePerMonth,
+    /** Projected rate at the configured capacity. */
+    maxMonthlyRate: ratePerMonth,
   };
 };
 
@@ -110,7 +92,7 @@ export const fetchStorageMetrics = async (
 export function computeDashboardMetrics(
   balances: BalancesData,
   datasets: DataSet[],
-  pricing?: UseServicePriceResult,
+  pricing?: UsePriceListResult,
 ) {
   const totalStoredGiB = datasets.reduce(
     (acc, d) => acc + bytesToGiB(d.totalSize.sizeBytes).toNumber(),
@@ -136,14 +118,11 @@ export function computeDashboardMetrics(
   const isRateExceeded = monthlyRate > maxMonthlyRate && maxMonthlyRate > 0;
 
   const pricePerTiB = pricing
-    ? bigIntToDecimal(pricing.pricePerTiBPerMonthNoCDN, 18).toNumber()
+    ? bigIntToDecimal(pricing.rates.storagePerTibPerMonth, 18).toNumber()
     : 0;
   const matchingCapacityGiB = computeRequiredCapacity(monthlyRate, pricePerTiB);
-  const minFeeCapacityGiB = pricing
-    ? calculateMinimumCapacityThreshold(
-        bigIntToDecimal(pricing.pricePerTiBPerMonthNoCDN, 18).toNumber(),
-        bigIntToDecimal(pricing.minimumPricePerMonth, 18).toNumber(),
-      ).toNumber()
+  const datasetFeePerMonth = pricing
+    ? bigIntToDecimal(pricing.rates.datasetFeePerMonth, 18).toNumber()
     : 0;
 
   return {
@@ -161,28 +140,37 @@ export function computeDashboardMetrics(
     burnRatePercent,
     isRateExceeded,
     matchingCapacityGiB,
-    minFeeCapacityGiB,
+    datasetFeePerMonth,
   };
 }
 
 /**
  * Compute required capacity in GB to match current monthly rate.
  */
-export function computeRequiredCapacity(monthlyRate: number, pricePerTiB: number): number {
+function computeRequiredCapacity(monthlyRate: number, pricePerTiB: number): number {
   return pricePerTiB > 0 ? Math.ceil((monthlyRate / pricePerTiB) * 1024) : 0;
 }
 
 /**
  * Pure function: compute cost preview for a prospective storage configuration.
+ * Rates come from the SDK's `calculateEffectiveRate`.
  */
 export function computeConfigCostPreview(
   capacityGiB: number,
   periodDays: number,
   warningThresholdDays: number,
   storageBalance: number,
-  pricing: UseServicePriceResult,
+  pricing: UsePriceListResult,
 ) {
-  const { perMonth, isMinimumApplied } = computeMonthlyStorageCost(capacityGiB, pricing);
+  const { ratePerMonth } = calculateEffectiveRate({
+    sizeInBytes: BigInt(capacityGiB) * SIZE_CONSTANTS.GiB,
+    storagePerTibPerMonth: pricing.rates.storagePerTibPerMonth,
+    datasetFeePerMonth: pricing.rates.datasetFeePerMonth,
+    epochsPerMonth: TIME_CONSTANTS.EPOCHS_PER_MONTH,
+  });
+
+  const perMonth = bigIntToDecimal(ratePerMonth, 18);
+  const datasetFee = bigIntToDecimal(pricing.rates.datasetFeePerMonth, 18);
   const perDay = perMonth.div(30);
   const totalCost = perMonth.times(new AppDecimal(periodDays).div(30));
 
@@ -194,7 +182,7 @@ export function computeConfigCostPreview(
   return {
     monthlyRateStr: perMonth.toFixed(DECIMAL_PLACES.RATE),
     periodCostStr: totalCost.toFixed(4),
-    isMinimumApplied,
+    datasetFeeStr: datasetFee.toFixed(DECIMAL_PLACES.RATE),
     depositNeeded,
     coverageDays,
     isAboveThreshold: coverageDays >= warningThresholdDays,

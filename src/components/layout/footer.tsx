@@ -24,7 +24,7 @@ export function Footer() {
 
         <div className="flex items-center justify-center gap-2 font-semibold md:justify-end">
           <a
-            href="https://github.com/FIL-Builders/fs-upload-dapp"
+            href="https://github.com/FIL-Builders/foc-upload-dapp"
             target="_blank"
             className="flex items-center gap-2 hover:scale-120 cursor-pointer text-xs"
           >

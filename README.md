@@ -14,8 +14,8 @@ A starter kit for building on [Filecoin Onchain Cloud](https://docs.filecoin.clo
 ## Quick Start
 
 ```bash
-git clone https://github.com/FIL-Builders/fs-upload-dapp
-cd fs-upload-dapp
+git clone https://github.com/FIL-Builders/foc-upload-dapp
+cd foc-upload-dapp
 pnpm install
 pnpm dev
 ```

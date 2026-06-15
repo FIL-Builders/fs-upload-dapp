@@ -10,6 +10,7 @@ import { pluralize } from "@/lib/format";
 import { formatSizeMessage, getPdpScannerUrl, isDatasetOnIpfs } from "@/lib/piece";
 import { cn } from "@/lib/utils";
 import { useDeleteDataset } from "@/hooks/use-delete";
+import { TerminateCostNote } from "@/components/storage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -123,6 +124,7 @@ export function DatasetDetailContent({ datasetId }: { datasetId: string }) {
             isPending={deleteDataset.isPending}
             itemName="Dataset"
             description="Are you sure you want to delete this dataset and all its pieces? This action cannot be undone."
+            costNote={<TerminateCostNote />}
             trigger={
               <Button variant="outline" size="icon">
                 <Trash2 className="h-4 w-4" />

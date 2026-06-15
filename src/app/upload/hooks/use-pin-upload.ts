@@ -2,19 +2,17 @@
 
 import { buildCarFromFiles, uploadToContexts, waitForIpniProviderResults } from "@/app/upload/lib";
 import { getErrorMessage } from "@/lib";
-import { useDepositAndApprove } from "@filoz/synapse-react";
+import { useApproveOperator, useDepositAndApprove } from "@filoz/synapse-react";
 import { useMutation } from "@tanstack/react-query";
 import { CID } from "multiformats/cid";
 import { toast } from "sonner";
 import { useConnection, useWalletClient } from "wagmi";
 import { queryKeys } from "@/lib/query-keys";
-import { fetchStorageMetrics } from "@/lib/storage-metrics";
 import { getSynapseClient } from "@/lib/synapse-client";
-import { useStorageConfig } from "@/providers/storage-config";
 import {
   activateProviderUploadSteps,
-  APP_METADATA,
   PIN_STEPS,
+  uploadMetadataForMode,
   UploadParams,
   useUploadPhase,
 } from "./use-upload-phase";
@@ -24,8 +22,8 @@ import {
 export const useFilecoinPinUpload = () => {
   const { address, chainId } = useConnection();
   const { data: walletClient } = useWalletClient();
-  const { config } = useStorageConfig();
   const { mutateAsync: depositAndApprove } = useDepositAndApprove();
+  const { mutateAsync: approveOperator } = useApproveOperator();
   const phase = useUploadPhase();
 
   const mutation = useMutation({
@@ -46,28 +44,31 @@ export const useFilecoinPinUpload = () => {
 
       phase.advance("session", "resolve");
 
-      const contexts = await synapse.storage.createContexts({
-        copies,
-        metadata: { ...APP_METADATA, withIPFSIndexing: "" },
-      });
+      const metadata = uploadMetadataForMode("pin");
+      const contexts = await synapse.storage.createContexts({ copies, metadata });
 
       phase.advance("resolve", "calculate", "Calculating storage...");
-      const datasetsToCreate = contexts.filter((c) => c.dataSetId === undefined).length;
 
-      // Storage metrics
-      const { isSufficient, depositNeeded } = await fetchStorageMetrics(
-        walletClient,
-        address,
-        config,
-        carBytes.length * copies,
-        { count: datasetsToCreate, withCDN: false },
-      );
+      // Exact on-chain costs (one CAR piece per copy). depositNeeded is the
+      // minimum shortfall after netting available balance.
+      const costs = await synapse.storage.calculateMultiContextCosts(contexts, {
+        dataSize: BigInt(carBytes.length),
+      });
 
       phase.complete("calculate");
 
-      if (!isSufficient) {
-        phase.activate("deposit", "Depositing funds...");
-        await depositAndApprove({ amount: depositNeeded });
+      if (!costs.ready) {
+        // depositAndApprove deposits the shortfall AND (re)approves the FWSS
+        // operator atomically; it rejects a zero amount. When funds already
+        // cover the upload and only the operator approval is missing, approve
+        // directly instead.
+        if (costs.depositNeeded > 0n) {
+          phase.activate("deposit", "Depositing funds...");
+          await depositAndApprove({ amount: costs.depositNeeded });
+        } else {
+          phase.activate("deposit", "Approving operator...");
+          await approveOperator();
+        }
         phase.complete("deposit");
       } else {
         phase.skip("deposit");
@@ -97,7 +98,8 @@ export const useFilecoinPinUpload = () => {
         pieces,
         failures,
         fileCount: totalFiles,
-        copies,
+        // Actual destinations resolved (may differ from requested copies)
+        copies: contexts.length,
         totalSize,
         ipfsRootCid: rootCid,
         hasFailures: failures.length > 0,

@@ -110,7 +110,7 @@ export function StorageConfigModal() {
 
         <div className="space-y-6 py-4">
           {/* Current Usage */}
-          {!isLoading && balances.isRateSufficient && balances.isLockupSufficient && (
+          {!isLoading && balances.isFwssApproved && (
             <div className="p-4 rounded-lg bg-muted/30 space-y-3">
               <h4 className="font-medium text-sm">Current Usage</h4>
               <div className="grid grid-cols-2 gap-4 text-sm">
@@ -264,9 +264,10 @@ export function StorageConfigModal() {
                   <span className="text-muted-foreground">Total ({period} days)</span>
                   <span className="font-medium">{costPreview.periodCostStr} USDFC</span>
                 </div>
-                {costPreview.isMinimumApplied && (
-                  <p className="text-xs text-orange-600 dark:text-orange-400">
-                    Minimum fee applied (under {metrics.minFeeCapacityGiB} GB threshold)
+                {Number(costPreview.datasetFeeStr) > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Includes a flat {costPreview.datasetFeeStr} USDFC/month proving-service fee per
+                    data set
                   </p>
                 )}
               </>

@@ -7,6 +7,7 @@ import { DataSet } from "@/lib/datasets";
 import { pluralize } from "@/lib/format";
 import { formatSizeMessage, isDatasetOnIpfs } from "@/lib/piece";
 import { useDeleteDataset } from "@/hooks/use-delete";
+import { TerminateCostNote } from "@/components/storage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,6 +60,7 @@ export function DatasetCard({ dataset }: DatasetCardProps) {
               onConfirm={handleDelete}
               isPending={deleteDataset.isPending}
               itemName="Dataset"
+              costNote={<TerminateCostNote />}
               trigger={
                 <Button variant="outline" size="icon">
                   <Trash2 className="h-4 w-4" />

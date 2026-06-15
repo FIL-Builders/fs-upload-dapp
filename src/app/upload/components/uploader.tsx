@@ -1,17 +1,20 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   CopiesSelector,
   FileDropZone,
   FileItem,
   StorageModeSelector,
+  UploadCostPreview,
   UploadFeedbackPanel,
 } from "@/app/upload/components/upload-controls";
 import { useFilecoinPinUpload } from "@/app/upload/hooks/use-pin-upload";
 import { useUpload } from "@/app/upload/hooks/use-upload";
-import { Trash2, Upload } from "lucide-react";
+import { useUploadCostPreview } from "@/app/upload/hooks/use-upload-cost-preview";
+import { AlertTriangle, Loader2, RotateCcw, Trash2, Upload } from "lucide-react";
 import { pluralize } from "@/lib/format";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import type { UploadMode } from "../types";
@@ -32,6 +35,25 @@ export function Uploader() {
 
   // --- Copies + Destinations ---
   const [copies, setCopies] = useState(1);
+
+  // --- Derived values ---
+  const totalSize = files.reduce((acc, f) => acc + f.size, 0);
+
+  // --- Upload plan + cost preview (single source of truth) ---
+  const preview = useUploadCostPreview({ sizeBytes: totalSize, copies, mode });
+
+  // --- Provider availability caps copies (one copy per distinct provider) ---
+  const counts = preview.counts;
+  const maxCopies = counts ? Math.max(1, counts.reachable) : undefined;
+  const copiesHint =
+    counts && counts.reachable < 5
+      ? `${counts.reachable} of ${counts.approved} ${pluralize(counts.approved, "provider")} reachable`
+      : undefined;
+
+  // Clamp copies down if provider availability shrank below the selection
+  useEffect(() => {
+    if (maxCopies != null && copies > maxCopies) setCopies(maxCopies);
+  }, [maxCopies, copies]);
 
   // --- Active hook tracking ---
   const [activePinMode, setActivePinMode] = useState(false);
@@ -65,23 +87,15 @@ export function Uploader() {
 
     if (mode === "pin") {
       setActivePinMode(true);
-      pinHook.upload({
-        files,
-        copies,
-      });
+      pinHook.upload({ files, copies });
     } else {
       setActivePinMode(false);
-      uploadHook.upload({
-        files,
-        copies,
-        withCDN: mode === "cdn",
-      });
+      uploadHook.upload({ files, copies, withCDN: mode === "cdn" });
     }
   }, [files, mode, copies, uploadHook, pinHook]);
 
-  // --- Derived values ---
-  const totalSize = files.reduce((acc, f) => acc + f.size, 0);
-  const canUpload = files.length > 0;
+  // Upload is allowed only once the current configuration resolves to a provider
+  const canUpload = files.length > 0 && !!preview.locations && !preview.error;
 
   // --- Render: feedback (active / failed / done) ---
   if (currentPhase.phase !== "idle") {
@@ -92,6 +106,41 @@ export function Uploader() {
         copies={copies}
         onReset={handleReset}
       />
+    );
+  }
+
+  // --- Gate: block all actions until storage providers are resolved ---
+  if (!preview.ready) {
+    if (preview.fetchError) {
+      return (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>{preview.fetchError.headline}</AlertTitle>
+          <AlertDescription className="space-y-3">
+            <p>{preview.fetchError.detail}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={preview.retry}
+              disabled={preview.isRefreshing}
+              className="w-full"
+            >
+              {preview.isRefreshing ? (
+                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RotateCcw className="mr-2 h-3.5 w-3.5" />
+              )}
+              {preview.isRefreshing ? "Retrying…" : "Retry"}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      );
+    }
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">Checking available storage providers…</p>
+      </div>
     );
   }
 
@@ -139,9 +188,17 @@ export function Uploader() {
 
       <StorageModeSelector mode={mode} onModeChange={setMode} disabled={isActive} />
 
-      <CopiesSelector copies={copies} onCopiesChange={setCopies} disabled={isActive} />
+      <CopiesSelector
+        copies={copies}
+        onCopiesChange={setCopies}
+        disabled={isActive}
+        max={maxCopies}
+        hint={copiesHint}
+      />
 
       <Separator />
+
+      <UploadCostPreview preview={preview} fileCount={files.length} mode={mode} />
 
       <Button className="w-full" size="lg" onClick={handleUpload} disabled={!canUpload || isActive}>
         <Upload className="mr-2 h-4 w-4" />

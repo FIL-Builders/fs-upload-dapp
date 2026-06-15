@@ -42,7 +42,7 @@ function ConnectWalletScreen({ children }: { children: React.ReactNode }) {
       </div>
       <p className="text-xl font-semibold hover:text-foreground flex flex-row items-center gap-1 justify-center mt-8">
         <a
-          href="https://github.com/FIL-Builders/fs-upload-dapp"
+          href="https://github.com/FIL-Builders/foc-upload-dapp"
           className="text-primary hover:underline cursor-pointer rounded-md hover:text-[#008cf6]"
           target="_blank"
         >

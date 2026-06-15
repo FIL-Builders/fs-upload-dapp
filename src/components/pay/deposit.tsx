@@ -25,7 +25,7 @@ const numericString = z
   .refine((v) => /^\d+\.?\d*$/.test(v), "Must be a valid number")
   .refine((v) => parseFloat(v) > 0, "Amount must be greater than 0");
 
-export const depositSchema = z.object({ amount: numericString });
+const depositSchema = z.object({ amount: numericString });
 export type DepositFormValues = z.infer<typeof depositSchema>;
 
 export function DepositForm() {
